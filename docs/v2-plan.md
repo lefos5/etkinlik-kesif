@@ -132,7 +132,7 @@ deseni gibi `node --test`). Kural ağırlıkları:
 
 ## 6. İnşa sırası (milestone'lar)
 
-- **M1 — RSVP temeli:** `api/attendance.js` + detay UI + "Gideceklerim" sekmesi. (Eşleşmenin yakıtı.)
+- **M1 — RSVP temeli:** ✅ **TAMAM** (`api/attendance.js` + detay "Gideceğim/İlgileniyorum" + "Eşlik arıyorum" + profil "Gideceklerim"). `v2-rsvp` branch'inde, preview'de test edildi.
 - **M2 — Adaylar + skorlama:** `lib/match.js` (+ testler) + `companions` API + "Eşlik bul" ekranı.
 - **M3 — Bağlantılar:** `api/connections*` + "Bağlantılar" sekmesi + istek akışı.
 - **M4 — Mesajlaşma:** messages API + sohbet UI (polling).

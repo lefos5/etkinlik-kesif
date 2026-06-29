@@ -60,7 +60,26 @@ body {
 .want-company[hidden] { display: none; }
 .want-company input { width: 17px; height: 17px; accent-color: var(--accent); flex: 0 0 auto; }
 .want-company .soon { font-size: .78rem; opacity: .7; }
+.find-companions { margin: 8px 0 2px; }
 .going-list { margin-top: 10px; }
+
+/* Eşlik bul — aday kartları */
+.companions-dialog { max-width: 540px; }
+.companions-list { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.companion { display: flex; align-items: flex-start; gap: 12px; padding: 12px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 14px; }
+.comp-avatar { flex: 0 0 auto; width: 46px; height: 46px; border-radius: 50%; overflow: hidden; display: flex;
+  align-items: center; justify-content: center; background: var(--grad-soft); font-weight: 600; font-size: 1rem; }
+.comp-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.comp-body { flex: 1; min-width: 0; }
+.comp-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.comp-nick { font-weight: 600; color: var(--accent-2); }
+.comp-score { font-size: .82rem; color: var(--teal); font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+.comp-meta { font-size: .82rem; color: var(--muted); margin: 2px 0 4px; }
+.comp-bio { font-size: .86rem; color: var(--text); margin-bottom: 6px; }
+.comp-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+.comp-connect { flex: 0 0 auto; align-self: center; font-size: .82rem; padding: 7px 12px; }
+.comp-connect .soon { font-size: .74rem; opacity: .7; }
 .logo-text {
   background: linear-gradient(105deg, #ffffff 0%, #d8b4fe 45%, #ec4899 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;

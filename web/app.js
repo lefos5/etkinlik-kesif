@@ -379,8 +379,9 @@ async function openDetail(id) {
       </div>
       <label id="wantCompanyRow" class="want-company" hidden>
         <input type="checkbox" id="wantCompany" />
-        <span>Eşlik arıyorum — bu etkinliğe birlikte gidecek biriyle eşleş <span class="soon">(yakında)</span></span>
+        <span>Eşlik arıyorum — bu etkinliğe birlikte gidecek biriyle eşleş</span>
       </label>
+      <button id="findCompanions" type="button" class="ghost find-companions" hidden>🧑‍🤝‍🧑 Eşlik bul</button>
       <div class="detail-info">${info}</div>
       <div class="detail-desc">
         <h4>Etkinlik hakkında</h4>
@@ -402,12 +403,15 @@ async function openDetail(id) {
     const interestedBtn = body.querySelector('#rsvpInterested');
     const wcRow = body.querySelector('#wantCompanyRow');
     const wcCheck = body.querySelector('#wantCompany');
+    const findBtn = body.querySelector('#findCompanions');
     const paintRsvp = (att) => {
       goingBtn.classList.toggle('on', att?.status === 'going');
       interestedBtn.classList.toggle('on', att?.status === 'interested');
       wcRow.hidden = !att;
       wcCheck.checked = att ? att.want_company : false;
+      findBtn.hidden = !(att && att.want_company);    // eslik arama acikken goster
     };
+    findBtn.onclick = () => openCompanions(id);
     let att = await getAttendance(id);
     paintRsvp(att);
     const choose = async (status) => {
@@ -430,6 +434,43 @@ async function openDetail(id) {
   } catch (e) {
     body.innerHTML = `<div class="muted">Detay yüklenemedi: ${e.message}</div>`;
   }
+}
+
+// ---- Eşlik bul (eşleşme adayları, v2 M2) ------------------------------------
+async function openCompanions(eventId) {
+  const dlg = document.getElementById('companionsDialog');
+  const body = document.getElementById('companionsBody');
+  body.innerHTML = '<div class="muted">Yükleniyor…</div>';
+  dlg.showModal();
+  try {
+    const { companions } = await api(`/api/events/${eventId}/companions`);
+    if (!companions.length) {
+      body.innerHTML = '<div class="empty">Şimdilik bu etkinlikte eşlik arayan başka kimse yok. Daha sonra tekrar bak.</div>';
+      return;
+    }
+    body.innerHTML = companions.map(companionCard).join('');
+  } catch (e) {
+    body.innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
+  }
+}
+function companionCard(c) {
+  const av = c.avatar_url
+    ? `<img src="${escapeHtml(c.avatar_url)}" alt="">`
+    : escapeHtml(initials(c.nickname || '?'));
+  const statusLabel = c.status === 'going' ? 'Gidecek' : 'İlgileniyor';
+  const meta = [statusLabel, c.district, c.age_band].filter(Boolean).map(escapeHtml).join(' · ');
+  const badges = (c.reasons || []).map((r) => `<span class="badge reason">${escapeHtml(r)}</span>`).join('');
+  return `
+    <div class="companion">
+      <div class="comp-avatar">${av}</div>
+      <div class="comp-body">
+        <div class="comp-top"><span class="comp-nick">@${escapeHtml(c.nickname || '—')}</span><span class="comp-score">%${c.score} uyum</span></div>
+        <div class="comp-meta">${meta}</div>
+        ${c.bio ? `<div class="comp-bio">${escapeHtml(c.bio)}</div>` : ''}
+        <div class="comp-badges">${badges}</div>
+      </div>
+      <button class="ghost comp-connect" type="button" disabled title="Yakında">Eşlik isteği <span class="soon">(yakında)</span></button>
+    </div>`;
 }
 
 // ---- Kaydettiklerim gorunumu ------------------------------------------------
@@ -1113,7 +1154,7 @@ onAuth((user, event) => {
 });
 
 // Backdrop'a (kutu disina) tiklayinca kapat. (Esc zaten native kapatir.)
-['detailDialog', 'prefsDialog', 'calDialog'].forEach((dlgId) => {
+['detailDialog', 'prefsDialog', 'calDialog', 'companionsDialog'].forEach((dlgId) => {
   const dlg = document.getElementById(dlgId);
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 });
