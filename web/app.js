@@ -964,7 +964,7 @@ async function renderConnections() {
         <div class="conn-actions"><button class="comp-connect accept" data-act="accept" data-id="${c.id}">Kabul</button>
         <button class="ghost comp-connect" data-act="decline" data-id="${c.id}">Reddet</button></div></div>`)
       + group('Bağlantıların', accepted, (c) => `<div class="conn-row">${connPerson(c)}
-        <span class="conn-tag ok">Bağlısınız</span></div>`)
+        <button class="comp-connect chat-open" data-id="${c.id}" data-nick="${escapeHtml(c.other?.nickname || '')}">💬 Sohbet</button></div>`)
       + group('Gönderilen istekler', outgoing, (c) => `<div class="conn-row">${connPerson(c)}
         <span class="conn-tag">Bekliyor</span></div>`);
     el.querySelectorAll('.comp-connect[data-act]').forEach((btn) => {
@@ -974,8 +974,52 @@ async function renderConnections() {
         catch (e) { alert('İşlem başarısız: ' + e.message); btn.disabled = false; }
       };
     });
+    el.querySelectorAll('.chat-open').forEach((btn) => {
+      btn.onclick = () => openChat(btn.dataset.id, btn.dataset.nick);
+    });
   } catch (e) { el.innerHTML = `<div class="empty">Yüklenemedi: ${e.message}</div>`; }
 }
+
+// ---- Sohbet (mesajlaşma, v2 M4 — polling) ----------------------------------
+let chatConnId = null, chatTimer = null;
+async function openChat(connId, nick) {
+  chatConnId = connId;
+  document.getElementById('chatTitle').textContent = '@' + (nick || '');
+  document.getElementById('chatMessages').innerHTML = '<div class="muted">Yükleniyor…</div>';
+  document.getElementById('chatDialog').showModal();
+  await loadMessages();
+  clearInterval(chatTimer);
+  chatTimer = setInterval(loadMessages, 4000);          // basit polling (v2.0)
+}
+async function loadMessages() {
+  if (!chatConnId) return;
+  try {
+    const { messages } = await api(`/api/connections/${chatConnId}/messages`);
+    const el = document.getElementById('chatMessages');
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    el.innerHTML = messages.length
+      ? messages.map((m) => `<div class="bubble ${m.mine ? 'mine' : 'theirs'}">${escapeHtml(m.body)}</div>`).join('')
+      : '<div class="empty">İlk mesajı sen yaz 👋</div>';
+    if (atBottom) el.scrollTop = el.scrollHeight;        // kullanici yukari kaydirmadiysa dibe in
+  } catch { /* polling: sessiz gec */ }
+}
+document.getElementById('chatForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const inp = document.getElementById('chatInput');
+  const text = inp.value.trim();
+  if (!text || !chatConnId) return;
+  inp.value = '';
+  try {
+    await api(`/api/connections/${chatConnId}/messages`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ body: text }),
+    });
+    await loadMessages();
+  } catch (err) { alert('Gönderilemedi: ' + err.message); inp.value = text; }
+});
+document.getElementById('chatClose').onclick = () => document.getElementById('chatDialog').close();
+document.getElementById('chatDialog').addEventListener('close', () => {
+  clearInterval(chatTimer); chatTimer = null; chatConnId = null;   // polling'i durdur
+});
 function setConnBadge(n) {
   const b = document.getElementById('pfConnBadge');
   b.textContent = n || '';
@@ -1234,7 +1278,7 @@ onAuth((user, event) => {
 });
 
 // Backdrop'a (kutu disina) tiklayinca kapat. (Esc zaten native kapatir.)
-['detailDialog', 'prefsDialog', 'calDialog', 'companionsDialog'].forEach((dlgId) => {
+['detailDialog', 'prefsDialog', 'calDialog', 'companionsDialog', 'chatDialog'].forEach((dlgId) => {
   const dlg = document.getElementById(dlgId);
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 });

@@ -134,9 +134,9 @@ deseni gibi `node --test`). Kural ağırlıkları:
 
 - **M1 — RSVP temeli:** ✅ **TAMAM** (`api/attendance.js` + detay "Gideceğim/İlgileniyorum" + "Eşlik arıyorum" + profil "Gideceklerim"). `v2-rsvp` branch'inde, preview'de test edildi.
 - **M2 — Adaylar + skorlama:** ✅ **TAMAM** — `lib/match.js` (+ testler) + `companions` API + "Etkinlik arkadaşı bul" ekranı. `v2-rsvp` branch'inde.
-- **M3 — Bağlantılar:** `api/connections*` + "Bağlantılar" sekmesi + istek akışı.
-- **M4 — Mesajlaşma:** messages API + sohbet UI (polling).
-- **M5 — Cila/güvenlik:** engelleme UI, raporlama iskeleti, yaş kapısı, boş durumlar, oran sınırı.
+- **M3 — Bağlantılar:** ✅ **TAMAM** — `api/connections.js` + `[id].js` (PATCH) + profil "Bağlantılar" sekmesi + nav rozeti + aday kartı işlevsel butonu.
+- **M4 — Mesajlaşma:** ✅ **TAMAM** — `api/connections/[id]/messages.js` + sohbet dialog (polling 4sn). Yalnız accepted bağlantıda.
+- **M5 — Cila/güvenlik:** engelleme UI, raporlama iskeleti, oran sınırı, boş durumlar. (Sıradaki.)
 
 Her milestone tek başına deploy edilebilir ve değer üretir.
 

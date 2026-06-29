@@ -278,6 +278,19 @@
     <form method="dialog"><menu><button class="ghost">Kapat</button></menu></form>
   </dialog>
 
+  <!-- Sohbet (kabul edilmiş bağlantı) -->
+  <dialog id="chatDialog" class="chat-dialog">
+    <div class="chat-head">
+      <span id="chatTitle" class="chat-title"></span>
+      <button type="button" id="chatClose" class="chat-x" aria-label="Kapat">✕</button>
+    </div>
+    <div id="chatMessages" class="chat-messages"></div>
+    <form id="chatForm" class="chat-form">
+      <input id="chatInput" type="text" maxlength="1000" placeholder="Mesaj yaz…" autocomplete="off" />
+      <button type="submit">Gönder</button>
+    </form>
+  </dialog>
+
   <script type="module" src="./app.js"></script>
 </body>
 </html>

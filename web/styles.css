@@ -93,6 +93,21 @@ body {
 .conn-actions { display: flex; gap: 6px; margin-left: auto; }
 .conn-tag { margin-left: auto; font-size: .8rem; color: var(--muted); }
 .conn-tag.ok { color: var(--teal); }
+.conn-row .chat-open { margin-left: auto; }
+
+/* Sohbet */
+.chat-dialog { max-width: 440px; }
+.chat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.chat-title { font-weight: 600; color: var(--accent-2); }
+.chat-x { background: transparent; color: var(--muted); padding: 4px 9px; border-radius: 8px; font-size: 1rem; }
+.chat-x:hover { background: var(--surface-2); color: var(--text); filter: none; }
+.chat-messages { display: flex; flex-direction: column; gap: 6px; height: 52vh; overflow-y: auto; padding: 4px 2px; }
+.bubble { max-width: 76%; padding: 8px 12px; border-radius: 14px; font-size: .9rem; line-height: 1.35; word-break: break-word; }
+.bubble.mine { align-self: flex-end; background: var(--grad); color: #fff; border-bottom-right-radius: 4px; }
+.bubble.theirs { align-self: flex-start; background: var(--surface-2); border-bottom-left-radius: 4px; }
+.chat-form { display: flex; gap: 8px; margin-top: 12px; }
+.chat-form input { flex: 1; margin-top: 0; }
+.chat-form button { flex: 0 0 auto; }
 .logo-text {
   background: linear-gradient(105deg, #ffffff 0%, #d8b4fe 45%, #ec4899 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
