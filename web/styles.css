@@ -54,6 +54,13 @@ body {
 .save-toggle.on { background: rgba(236,72,153,.14); border-color: rgba(236,72,153,.5); color: var(--accent-2); }
 .detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .detail-actions .save-toggle { margin: 12px 0 2px; }
+.rsvp-going.on { background: rgba(45,212,191,.16); border-color: rgba(45,212,191,.5); color: var(--teal); }
+.rsvp-interested.on { background: rgba(139,92,246,.16); border-color: rgba(139,92,246,.5); color: #c4b5fd; }
+.want-company { display: flex; align-items: center; gap: 9px; margin: 4px 0 2px; font-size: .9rem; color: var(--muted); cursor: pointer; }
+.want-company[hidden] { display: none; }
+.want-company input { width: 17px; height: 17px; accent-color: var(--accent); flex: 0 0 auto; }
+.want-company .soon { font-size: .78rem; opacity: .7; }
+.going-list { margin-top: 10px; }
 .logo-text {
   background: linear-gradient(105deg, #ffffff 0%, #d8b4fe 45%, #ec4899 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;

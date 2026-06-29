@@ -143,6 +143,7 @@
       </div>
       <nav class="profile-nav-list">
         <button type="button" class="pnav active" data-sec="profil">Profil</button>
+        <button type="button" class="pnav" data-sec="gidecekler">Gideceklerim</button>
         <button type="button" class="pnav" data-sec="esles">Eşleştirme</button>
         <button type="button" class="pnav" data-sec="hesap">Hesap</button>
       </nav>
@@ -173,6 +174,12 @@
         <div id="pfInterests" class="chips"></div>
         <button type="button" id="pfSaveProfil" class="auth-submit psave">Kaydet</button>
         <span id="pfProfilMsg" class="note"></span>
+      </section>
+
+      <section class="psec" data-sec="gidecekler" hidden>
+        <h2>Gideceklerim</h2>
+        <p class="muted note">"Gideceğim" / "İlgileniyorum" işaretlediğin etkinlikler.</p>
+        <div id="pfGoing" class="grid going-list"></div>
       </section>
 
       <section class="psec" data-sec="esles" hidden>

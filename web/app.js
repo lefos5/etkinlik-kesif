@@ -72,6 +72,25 @@ async function track(event_id, kind) {
   }).catch(() => {});
 }
 
+// ---- RSVP (etkinlik katilimi, v2) ------------------------------------------
+async function getAttendance(eventId) {
+  if (!currentUser) return null;
+  try { const { attendance } = await api(`/api/attendance?event_id=${eventId}`); return attendance; }
+  catch { return null; }
+}
+function setAttendance(eventId, status, wantCompany) {
+  return api('/api/attendance', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ event_id: eventId, status, want_company: wantCompany }),
+  }).then((r) => r.attendance);
+}
+function clearAttendance(eventId) {
+  return api('/api/attendance', {
+    method: 'DELETE', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ event_id: eventId }),
+  });
+}
+
 // ---- Render -----------------------------------------------------------------
 const fmtDate = (iso) => new Date(iso).toLocaleString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short', hour: '2-digit', minute: '2-digit' });
 
@@ -355,7 +374,13 @@ async function openDetail(id) {
       <div class="cats">${cats}</div>
       <div class="detail-actions">
         <button id="detailSave" type="button" class="save-toggle${isSaved(id) ? ' on' : ''}">♥ <span>${isSaved(id) ? 'Kaydedildi' : 'Kaydet'}</span></button>
+        <button id="rsvpGoing" type="button" class="save-toggle rsvp-going">✅ <span>Gideceğim</span></button>
+        <button id="rsvpInterested" type="button" class="save-toggle rsvp-interested">⭐ <span>İlgileniyorum</span></button>
       </div>
+      <label id="wantCompanyRow" class="want-company" hidden>
+        <input type="checkbox" id="wantCompany" />
+        <span>Eşlik arıyorum — bu etkinliğe birlikte gidecek biriyle eşleş <span class="soon">(yakında)</span></span>
+      </label>
       <div class="detail-info">${info}</div>
       <div class="detail-desc">
         <h4>Etkinlik hakkında</h4>
@@ -370,6 +395,37 @@ async function openDetail(id) {
       const on = toggleSaved(id);
       ds.classList.toggle('on', on);
       ds.querySelector('span').textContent = on ? 'Kaydedildi' : 'Kaydet';
+    };
+
+    // RSVP: Gideceğim / İlgileniyorum (+ eşlik arıyorum)
+    const goingBtn = body.querySelector('#rsvpGoing');
+    const interestedBtn = body.querySelector('#rsvpInterested');
+    const wcRow = body.querySelector('#wantCompanyRow');
+    const wcCheck = body.querySelector('#wantCompany');
+    const paintRsvp = (att) => {
+      goingBtn.classList.toggle('on', att?.status === 'going');
+      interestedBtn.classList.toggle('on', att?.status === 'interested');
+      wcRow.hidden = !att;
+      wcCheck.checked = att ? att.want_company : false;
+    };
+    let att = await getAttendance(id);
+    paintRsvp(att);
+    const choose = async (status) => {
+      if (!currentUser) { dlg.close(); openAuth('login'); return; }
+      goingBtn.disabled = interestedBtn.disabled = true;
+      try {
+        if (att?.status === status) { await clearAttendance(id); att = null; }   // ayni butona tekrar -> kaldir
+        else att = await setAttendance(id, status, att ? att.want_company : true);
+        paintRsvp(att);
+      } catch (e) { alert('İşlem başarısız: ' + e.message); }
+      finally { goingBtn.disabled = interestedBtn.disabled = false; }
+    };
+    goingBtn.onclick = () => choose('going');
+    interestedBtn.onclick = () => choose('interested');
+    wcCheck.onchange = async () => {
+      if (!att) return;
+      try { att = await setAttendance(id, att.status, wcCheck.checked); }
+      catch (e) { alert('İşlem başarısız: ' + e.message); wcCheck.checked = att.want_company; }
     };
   } catch (e) {
     body.innerHTML = `<div class="muted">Detay yüklenemedi: ${e.message}</div>`;
@@ -800,6 +856,15 @@ function setProfileNav() {
 function showProfileSection(sec) {
   document.querySelectorAll('#profileScreen .pnav').forEach((b) => b.classList.toggle('active', b.dataset.sec === sec));
   document.querySelectorAll('#profileScreen .psec').forEach((s) => { s.hidden = s.dataset.sec !== sec; });
+  if (sec === 'gidecekler') renderGoing();
+}
+async function renderGoing() {
+  const el = document.getElementById('pfGoing');
+  el.innerHTML = '<div class="muted">Yükleniyor…</div>';
+  try {
+    const { events } = await api('/api/attendance');
+    renderInto(el, events, 'Henüz bir etkinliğe "Gideceğim/İlgileniyorum" demedin. Etkinlik detayından işaretleyebilirsin.');
+  } catch (e) { el.innerHTML = `<div class="empty">Yüklenemedi: ${e.message}</div>`; }
 }
 
 let profileDictsBuilt = false;
