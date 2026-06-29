@@ -1,0 +1,23 @@
+{
+  "name": "nereye",
+  "version": "0.1.0",
+  "description": "Nereye? — Istanbul etkinlik kesif & agregasyon platformu (v1)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "ingest:mock": "node --env-file=.env scripts/ingest-local.js mock",
+    "ingest": "node --env-file=.env scripts/ingest-local.js",
+    "purge": "node --env-file=.env scripts/purge-source.js",
+    "backfill:districts": "node --env-file=.env scripts/backfill-districts.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "vercel": "latest"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

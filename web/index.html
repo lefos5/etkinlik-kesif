@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nereye? — İstanbul'da bu hafta ne var</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" id="brand"><span class="logo-text">Nereye?</span> <span class="city">İstanbul</span></div>
+    <div class="topbar-actions">
+      <button id="savedBtn" class="ghost">♥ <span class="lbl">Kaydettiklerim</span> <span id="savedCount" class="count"></span></button>
+      <button id="prefsBtn" class="ghost">İlgi Alanlarım</button>
+      <button id="authBtn" class="ghost">Giriş</button>
+    </div>
+  </header>
+
+  <!-- Onboarding / tercih paneli -->
+  <dialog id="prefsDialog">
+    <form method="dialog" id="prefsForm">
+      <h2>Sana uygun etkinlikler için ilgi alanlarını seç</h2>
+      <div id="prefsChips" class="chips"></div>
+      <label class="switch">
+        <input type="checkbox" id="freeOnly" /> Yalnızca ücretsiz etkinlikler
+      </label>
+      <menu>
+        <button value="cancel" class="ghost">Vazgeç</button>
+        <button value="save" id="savePrefs">Kaydet</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <main>
+    <section id="savedSection" hidden>
+      <div class="hero">
+        <h1><span class="grad-text">Kaydettiklerim</span></h1>
+        <p class="muted" id="savedHint"></p>
+      </div>
+      <div id="saved" class="grid"></div>
+    </section>
+
+    <section id="feedSection">
+      <div class="hero">
+        <h1>Bu hafta <span class="grad-text">nereye?</span></h1>
+        <p class="muted" id="feedHint"></p>
+      </div>
+      <div id="feed" class="grid"></div>
+    </section>
+
+    <section id="browseSection">
+      <div class="browse-head">
+        <h2>Tüm etkinlikler</h2>
+        <div class="browse-controls">
+          <input id="searchBox" type="search" placeholder="🔍 Etkinlik ara…" autocomplete="off" />
+          <button id="dateBtn" class="ghost" type="button">📅 Tarih</button>
+          <select id="districtSelect" class="district-select" aria-label="Semt">
+            <option value="">📍 Tüm semtler</option>
+          </select>
+        </div>
+        <div id="filterChips" class="chips small"></div>
+      </div>
+      <div id="dateChip" class="date-chip" hidden></div>
+      <div id="events"></div>
+      <div id="loadMore" class="load-more"></div>
+    </section>
+  </main>
+
+  <!-- Giris / Kayit — tam ekran (Biletix tarzi split layout) -->
+  <div id="authScreen" class="auth-screen" hidden>
+    <div class="auth-left">
+      <div class="auth-left-top"><span class="logo-text">Nereye?</span></div>
+      <div class="auth-left-copy">
+        <h2>Yeni etkinliklerden ilk önce senin haberin olsun.</h2>
+        <p>İlgi alanlarına göre etkinlikleri keşfet, birlikte gidecek birini bul.</p>
+      </div>
+    </div>
+    <div class="auth-right">
+      <button type="button" id="authClose" class="dialog-x auth-close" aria-label="Kapat">✕</button>
+      <div class="auth-switch-top">
+        <span id="authSwitchText" class="muted">Hesabın yok mu?</span>
+        <button type="button" id="authSwitchBtn" class="ghost">Kayıt ol</button>
+      </div>
+      <div class="auth-form-wrap">
+        <h1 id="authTitle">Giriş yap</h1>
+        <form id="authForm">
+          <div class="field" id="nameField" hidden>
+            <input id="authName" type="text" maxlength="60" placeholder="Ad" autocomplete="name" />
+          </div>
+          <div class="field">
+            <input id="authEmail" type="email" required placeholder="E-posta" autocomplete="email" />
+          </div>
+          <div class="field">
+            <span class="pw-wrap">
+              <input id="authPassword" type="password" required minlength="8" placeholder="Şifre" autocomplete="current-password" />
+              <button type="button" id="pwToggle" class="pw-toggle" aria-label="Şifreyi göster">👁</button>
+            </span>
+          </div>
+          <div id="pwStrength" class="pw-strength" hidden>
+            <div class="pw-bar"><i></i><i></i><i></i></div>
+            <span id="pwHint" class="pw-hint"></span>
+          </div>
+          <a href="#" id="authForgot" class="auth-forgot">Şifremi unuttum</a>
+          <label class="kvkk-check" id="kvkkField" hidden>
+            <input type="checkbox" id="authKvkk" />
+            <span>Kişisel verilerin işlenmesine ilişkin aydınlatma metnini okudum, kabul ediyorum.</span>
+          </label>
+          <p id="authMsg" class="note"></p>
+          <button type="submit" id="authSubmit" class="auth-submit">Giriş yap</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Yeni sifre belirle (sifre sifirlama linkinden donunce) -->
+  <dialog id="resetDialog">
+    <h2>Yeni şifre belirle</h2>
+    <form id="resetForm">
+      <label class="field">Yeni şifre
+        <input id="resetPassword" type="password" required minlength="6" placeholder="En az 6 karakter" autocomplete="new-password" />
+      </label>
+      <p id="resetMsg" class="note"></p>
+      <menu><button type="submit" id="resetSubmit">Şifreyi güncelle</button></menu>
+    </form>
+  </dialog>
+
+  <!-- Profil / Hesabim — tam sayfa, sol menulu -->
+  <div id="profileScreen" class="profile-screen" hidden>
+    <button type="button" id="pfClose" class="dialog-x auth-close" aria-label="Kapat">✕</button>
+    <aside class="profile-nav">
+      <div class="profile-nav-head">
+        <div class="avatar-wrap">
+          <div id="pfNavAvatar" class="avatar-xl">?</div>
+          <button type="button" id="pfAvatarBtn" class="avatar-edit" aria-label="Fotoğraf yükle">📷</button>
+          <input type="file" id="pfAvatarInput" accept="image/*" hidden />
+        </div>
+        <div id="pfNavName" class="profile-name">Profilim</div>
+        <div id="pfNavNick" class="profile-nick"></div>
+        <div id="pfNavEmail" class="profile-email"></div>
+      </div>
+      <nav class="profile-nav-list">
+        <button type="button" class="pnav active" data-sec="profil">Profil</button>
+        <button type="button" class="pnav" data-sec="esles">Eşleştirme</button>
+        <button type="button" class="pnav" data-sec="hesap">Hesap</button>
+      </nav>
+    </aside>
+    <main class="profile-content">
+      <section class="psec" data-sec="profil">
+        <h2>Profil</h2>
+        <div class="field-row">
+          <label class="field2">Ad <span class="req" aria-hidden="true">*</span>
+            <input id="pfFirst" type="text" maxlength="30" placeholder="Adın" required />
+          </label>
+          <label class="field2">Soyad <span class="req" aria-hidden="true">*</span>
+            <input id="pfLast" type="text" maxlength="30" placeholder="Soyadın" required />
+          </label>
+        </div>
+        <label class="field2">Kullanıcı adı <span class="req" aria-hidden="true">*</span>
+          <span class="nick-wrap">
+            <span class="nick-at" aria-hidden="true">@</span>
+            <input id="pfNick" type="text" maxlength="20" placeholder="kullaniciadi"
+                   autocapitalize="none" autocomplete="off" spellcheck="false" inputmode="latin" />
+          </span>
+        </label>
+        <label class="field2">
+          <span class="field2-head">Hakkında <span id="pfBioCount" class="char-count">0/280</span></span>
+          <textarea id="pfBio" maxlength="280" rows="3" placeholder="Kısa bir tanıtım (isteğe bağlı)"></textarea>
+        </label>
+        <div class="field-label">İlgi alanların</div>
+        <div id="pfInterests" class="chips"></div>
+        <button type="button" id="pfSaveProfil" class="auth-submit psave">Kaydet</button>
+        <span id="pfProfilMsg" class="note"></span>
+      </section>
+
+      <section class="psec" data-sec="esles" hidden>
+        <h2>Eşleştirme bilgileri</h2>
+        <p class="muted note">Bu bilgiler ileride "kiminle gitsem" eşleştirmesinde ve güvenlik filtrelerinde kullanılacak.</p>
+        <label class="field2">Cinsiyet
+          <select id="pfGender">
+            <option value="">Belirtmek istemiyorum</option>
+            <option value="kadın">Kadın</option>
+            <option value="erkek">Erkek</option>
+            <option value="diğer">Diğer</option>
+          </select>
+        </label>
+        <label class="field2">Doğum yılı
+          <select id="pfBirthYear"><option value="">Seçilmemiş</option></select>
+        </label>
+        <label class="field2">Semt
+          <select id="pfDistrict"><option value="">Seçilmemiş</option></select>
+        </label>
+        <button type="button" id="pfSaveEsles" class="auth-submit psave">Kaydet</button>
+        <span id="pfEslesMsg" class="note"></span>
+      </section>
+
+      <section class="psec" data-sec="hesap" hidden>
+        <h2>Hesap</h2>
+        <div class="field-label">E-posta</div>
+        <div id="pfAccEmail" class="acc-email"></div>
+
+        <div class="acc-block">
+          <h3>Şifre değiştir</h3>
+          <span class="pw-wrap">
+            <input id="pfCurPw" type="password" placeholder="Mevcut şifren" autocomplete="current-password" />
+            <button type="button" id="pfCurPwToggle" class="pw-toggle" aria-label="Şifreyi göster">👁</button>
+          </span>
+          <span class="pw-wrap">
+            <input id="pfNewPw" type="password" minlength="8" placeholder="Yeni şifre (en az 8 karakter)" autocomplete="new-password" />
+            <button type="button" id="pfNewPwToggle" class="pw-toggle" aria-label="Şifreyi göster">👁</button>
+          </span>
+          <span class="pw-wrap">
+            <input id="pfNewPw2" type="password" minlength="8" placeholder="Yeni şifre (tekrar)" autocomplete="new-password" />
+            <button type="button" id="pfNewPw2Toggle" class="pw-toggle" aria-label="Şifreyi göster">👁</button>
+          </span>
+          <button type="button" id="pfChangePw" class="ghost">Şifreyi güncelle</button>
+          <span id="pfPwMsg" class="note"></span>
+        </div>
+
+        <div class="acc-block">
+          <button type="button" id="pfSignOut" class="ghost">Çıkış yap</button>
+        </div>
+
+        <div class="acc-block danger-block">
+          <h3>Hesabı sil</h3>
+          <p class="muted note">Bu işlem geri alınamaz. Profilin, kayıtların ve eşleşmelerin kalıcı olarak silinir.</p>
+          <button type="button" id="pfDelete" class="ghost danger">Hesabımı sil</button>
+          <span id="pfDelMsg" class="note"></span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Takvim -->
+  <dialog id="calDialog" class="cal-dialog">
+    <div class="cal-head">
+      <button id="calPrev" class="cal-nav" type="button" aria-label="Önceki ay">‹</button>
+      <div id="calTitle" class="cal-title"></div>
+      <button id="calNext" class="cal-nav" type="button" aria-label="Sonraki ay">›</button>
+    </div>
+    <div class="cal-weekdays">
+      <span>Pzt</span><span>Sal</span><span>Çar</span><span>Per</span><span>Cum</span><span>Cmt</span><span>Paz</span>
+    </div>
+    <div id="calGrid" class="cal-grid"></div>
+    <menu>
+      <button id="calClear" class="ghost" type="button">Tüm günler</button>
+      <button id="calApply" type="button">Uygula</button>
+    </menu>
+  </dialog>
+
+  <!-- Detay -->
+  <dialog id="detailDialog">
+    <div id="detailBody"></div>
+    <form method="dialog"><menu><button class="ghost">Kapat</button></menu></form>
+  </dialog>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
