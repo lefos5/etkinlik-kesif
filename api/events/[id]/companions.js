@@ -48,12 +48,24 @@ export default withErrors(async (req, res) => {
     .in('id', ids);
   if (pErr) throw pErr;
 
+  // Bu etkinlikteki mevcut baglantilarim (kart butonu durumu + engelliyi ele)
+  const { data: conns } = await db.from('connections')
+    .select('id, requester_id, addressee_id, status')
+    .eq('event_id', eventId)
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
+  const connByOther = {};
+  for (const c of conns ?? []) {
+    const other = c.requester_id === user.id ? c.addressee_id : c.requester_id;
+    connByOther[other] = { id: c.id, status: c.status, direction: c.requester_id === user.id ? 'outgoing' : 'incoming' };
+  }
+
   const companions = (profs ?? [])
     .filter((p) => p.birth_year && now.getFullYear() - p.birth_year >= MIN_AGE)   // 18+ filtre
+    .filter((p) => connByOther[p.id]?.status !== 'blocked')                       // engellenen gizli
     .map((p) => {
       const { score, reasons, shared } = scoreCandidate(me, p, now);
       return {
-        id: p.id,                          // M3'te eslik istegi icin gerekli (uuid, hassas degil)
+        id: p.id,                          // eslik istegi icin gerekli (uuid, hassas degil)
         nickname: p.nickname,
         avatar_url: p.avatar_url,
         bio: p.bio,
@@ -61,6 +73,7 @@ export default withErrors(async (req, res) => {
         age_band: ageBand(p.birth_year, now),
         status: statusByUser[p.id],        // going | interested
         shared_interests: shared,
+        connection: connByOther[p.id] || null,   // { id, status, direction } | null
         score, reasons,
       };
     })

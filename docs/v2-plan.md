@@ -119,8 +119,8 @@ deseni gibi `node --test`). Kural ağırlıkları:
 ## 5. UI akışları (vanilla JS, build yok — mevcut desen)
 
 1. **Etkinlik detayı:** "♥ Kaydet" yanına **"Gideceğim"** / **"İlgileniyorum"** + açıldığında
-   **"Eşlik arıyorum"** anahtarı. Going+want_company ise → **"Eşlik bul (N kişi)"** butonu.
-2. **Eşlik bul ekranı (modal/sayfa):** aday kartları (avatar, @nick, yaş aralığı, semt, ortak
+   **"Eşlik arıyorum"** anahtarı. Going+want_company ise → **"Etkinlik arkadaşı bul"** butonu.
+2. **Etkinlik arkadaşı bul ekranı (modal/sayfa):** aday kartları (avatar, @nick, yaş aralığı, semt, ortak
    ilgi rozetleri, uyumluluk %, "Neden?"). "Eşlik isteği gönder" / durum etiketi.
 3. **Profil → yeni "Bağlantılar" sekmesi:** Gelen istekler (kabul/reddet), kabul edilenler
    (→ sohbet), gönderilenler. Rozet: bekleyen istek sayısı topbar'da.
@@ -133,7 +133,7 @@ deseni gibi `node --test`). Kural ağırlıkları:
 ## 6. İnşa sırası (milestone'lar)
 
 - **M1 — RSVP temeli:** ✅ **TAMAM** (`api/attendance.js` + detay "Gideceğim/İlgileniyorum" + "Eşlik arıyorum" + profil "Gideceklerim"). `v2-rsvp` branch'inde, preview'de test edildi.
-- **M2 — Adaylar + skorlama:** `lib/match.js` (+ testler) + `companions` API + "Eşlik bul" ekranı.
+- **M2 — Adaylar + skorlama:** ✅ **TAMAM** — `lib/match.js` (+ testler) + `companions` API + "Etkinlik arkadaşı bul" ekranı. `v2-rsvp` branch'inde.
 - **M3 — Bağlantılar:** `api/connections*` + "Bağlantılar" sekmesi + istek akışı.
 - **M4 — Mesajlaşma:** messages API + sohbet UI (polling).
 - **M5 — Cila/güvenlik:** engelleme UI, raporlama iskeleti, yaş kapısı, boş durumlar, oran sınırı.

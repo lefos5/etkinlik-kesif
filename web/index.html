@@ -144,6 +144,7 @@
       <nav class="profile-nav-list">
         <button type="button" class="pnav active" data-sec="profil">Profil</button>
         <button type="button" class="pnav" data-sec="gidecekler">Gideceklerim</button>
+        <button type="button" class="pnav" data-sec="baglantilar">Bağlantılar <span id="pfConnBadge" class="nav-badge" hidden></span></button>
         <button type="button" class="pnav" data-sec="esles">Eşleştirme</button>
         <button type="button" class="pnav" data-sec="hesap">Hesap</button>
       </nav>
@@ -180,6 +181,12 @@
         <h2>Gideceklerim</h2>
         <p class="muted note">"Gideceğim" / "İlgileniyorum" işaretlediğin etkinlikler.</p>
         <div id="pfGoing" class="grid going-list"></div>
+      </section>
+
+      <section class="psec" data-sec="baglantilar" hidden>
+        <h2>Bağlantılar</h2>
+        <p class="muted note">Etkinlik arkadaşı istekleri ve eşleşmelerin.</p>
+        <div id="pfConnections"></div>
       </section>
 
       <section class="psec" data-sec="esles" hidden>
@@ -265,7 +272,7 @@
 
   <!-- Eşlik bul (eşleşme adayları) -->
   <dialog id="companionsDialog" class="companions-dialog">
-    <h2>Eşlik bul</h2>
+    <h2>Etkinlik arkadaşı bul</h2>
     <p class="muted note">Bu etkinliğe gidecek/ilgilenen, eşlik arayan kişiler — uyumluluğa göre sıralı.</p>
     <div id="companionsBody" class="companions-list"></div>
     <form method="dialog"><menu><button class="ghost">Kapat</button></menu></form>

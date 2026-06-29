@@ -78,8 +78,21 @@ body {
 .comp-meta { font-size: .82rem; color: var(--muted); margin: 2px 0 4px; }
 .comp-bio { font-size: .86rem; color: var(--text); margin-bottom: 6px; }
 .comp-badges { display: flex; flex-wrap: wrap; gap: 5px; }
-.comp-connect { flex: 0 0 auto; align-self: center; font-size: .82rem; padding: 7px 12px; }
-.comp-connect .soon { font-size: .74rem; opacity: .7; }
+.comp-connect { flex: 0 0 auto; align-self: center; font-size: .82rem; padding: 7px 12px; border-radius: 999px; }
+.comp-connect.on { background: rgba(45,212,191,.16); border: 1px solid rgba(45,212,191,.5); color: var(--teal); }
+
+/* Bağlantılar sekmesi */
+.nav-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px;
+  padding: 0 5px; margin-left: 6px; border-radius: 999px; background: var(--accent-2); color: #fff;
+  font-size: .72rem; font-weight: 700; vertical-align: middle; }
+.nav-badge[hidden] { display: none; }
+.conn-group { margin-bottom: 22px; }
+.conn-group h3 { font-family: var(--font-display); font-size: 1rem; font-weight: 600; margin: 0 0 10px; color: var(--muted); }
+.conn-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border-soft); }
+.conn-event { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+.conn-actions { display: flex; gap: 6px; margin-left: auto; }
+.conn-tag { margin-left: auto; font-size: .8rem; color: var(--muted); }
+.conn-tag.ok { color: var(--teal); }
 .logo-text {
   background: linear-gradient(105deg, #ffffff 0%, #d8b4fe 45%, #ec4899 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;

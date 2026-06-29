@@ -91,6 +91,20 @@ function clearAttendance(eventId) {
   });
 }
 
+// ---- Bağlantılar (eşlik istekleri, v2 M3) ----------------------------------
+function sendConnection(addresseeId, eventId) {
+  return api('/api/connections', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ addressee_id: addresseeId, event_id: eventId }),
+  });
+}
+function respondConnection(id, action) {
+  return api(`/api/connections/${id}`, {
+    method: 'PATCH', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ action }),
+  });
+}
+
 // ---- Render -----------------------------------------------------------------
 const fmtDate = (iso) => new Date(iso).toLocaleString('tr-TR', { day: 'numeric', month: 'short', weekday: 'short', hour: '2-digit', minute: '2-digit' });
 
@@ -381,7 +395,7 @@ async function openDetail(id) {
         <input type="checkbox" id="wantCompany" />
         <span>Eşlik arıyorum — bu etkinliğe birlikte gidecek biriyle eşleş</span>
       </label>
-      <button id="findCompanions" type="button" class="ghost find-companions" hidden>🧑‍🤝‍🧑 Eşlik bul</button>
+      <button id="findCompanions" type="button" class="ghost find-companions" hidden>🧑‍🤝‍🧑 Etkinlik arkadaşı bul</button>
       <div class="detail-info">${info}</div>
       <div class="detail-desc">
         <h4>Etkinlik hakkında</h4>
@@ -449,9 +463,26 @@ async function openCompanions(eventId) {
       return;
     }
     body.innerHTML = companions.map(companionCard).join('');
+    body.querySelectorAll('.comp-connect[data-act]').forEach((btn) => {
+      btn.onclick = async () => {
+        btn.disabled = true;
+        try {
+          if (btn.dataset.act === 'request') await sendConnection(btn.dataset.uid, eventId);
+          else if (btn.dataset.act === 'accept') await respondConnection(btn.dataset.conn, 'accept');
+          await openCompanions(eventId);            // listeyi tazele (buton durumlari guncellensin)
+        } catch (e) { alert('İşlem başarısız: ' + e.message); btn.disabled = false; }
+      };
+    });
   } catch (e) {
     body.innerHTML = `<div class="empty">${escapeHtml(e.message)}</div>`;
   }
+}
+function connectButton(c) {
+  const conn = c.connection;
+  if (conn?.status === 'accepted') return '<button class="comp-connect on" type="button" disabled>Bağlandınız ✓</button>';
+  if (conn?.status === 'pending' && conn.direction === 'outgoing') return '<button class="ghost comp-connect" type="button" disabled>İstek gönderildi</button>';
+  if (conn?.status === 'pending' && conn.direction === 'incoming') return `<button class="comp-connect accept" type="button" data-act="accept" data-conn="${conn.id}">Kabul et</button>`;
+  return `<button class="ghost comp-connect" type="button" data-act="request" data-uid="${escapeHtml(c.id)}">Eşlik isteği gönder</button>`;
 }
 function companionCard(c) {
   const av = c.avatar_url
@@ -469,7 +500,7 @@ function companionCard(c) {
         ${c.bio ? `<div class="comp-bio">${escapeHtml(c.bio)}</div>` : ''}
         <div class="comp-badges">${badges}</div>
       </div>
-      <button class="ghost comp-connect" type="button" disabled title="Yakında">Eşlik isteği <span class="soon">(yakında)</span></button>
+      ${connectButton(c)}
     </div>`;
 }
 
@@ -898,6 +929,7 @@ function showProfileSection(sec) {
   document.querySelectorAll('#profileScreen .pnav').forEach((b) => b.classList.toggle('active', b.dataset.sec === sec));
   document.querySelectorAll('#profileScreen .psec').forEach((s) => { s.hidden = s.dataset.sec !== sec; });
   if (sec === 'gidecekler') renderGoing();
+  if (sec === 'baglantilar') renderConnections();
 }
 async function renderGoing() {
   const el = document.getElementById('pfGoing');
@@ -906,6 +938,53 @@ async function renderGoing() {
     const { events } = await api('/api/attendance');
     renderInto(el, events, 'Henüz bir etkinliğe "Gideceğim/İlgileniyorum" demedin. Etkinlik detayından işaretleyebilirsin.');
   } catch (e) { el.innerHTML = `<div class="empty">Yüklenemedi: ${e.message}</div>`; }
+}
+
+// ---- Bağlantılar görünümü (v2 M3) ------------------------------------------
+function connPerson(c) {                       // ortak: avatar + @nick + etkinlik satiri
+  const av = c.other?.avatar_url ? `<img src="${escapeHtml(c.other.avatar_url)}" alt="">` : escapeHtml(initials(c.other?.nickname || '?'));
+  const ev = c.event?.title ? `<div class="conn-event">${escapeHtml(c.event.title)}</div>` : '';
+  return `<div class="comp-avatar">${av}</div>
+    <div class="comp-body"><div class="comp-nick">@${escapeHtml(c.other?.nickname || '—')}</div>${ev}</div>`;
+}
+async function renderConnections() {
+  const el = document.getElementById('pfConnections');
+  el.innerHTML = '<div class="muted">Yükleniyor…</div>';
+  try {
+    const { incoming, outgoing, accepted } = await api('/api/connections');
+    setConnBadge(incoming.length);
+    if (!incoming.length && !outgoing.length && !accepted.length) {
+      el.innerHTML = '<div class="empty">Henüz bağlantın yok. Bir etkinlikte "Etkinlik arkadaşı bul" ile istek gönderebilirsin.</div>';
+      return;
+    }
+    const group = (title, items, render) => items.length
+      ? `<div class="conn-group"><h3>${title}</h3>${items.map(render).join('')}</div>` : '';
+    el.innerHTML =
+      group('Gelen istekler', incoming, (c) => `<div class="conn-row">${connPerson(c)}
+        <div class="conn-actions"><button class="comp-connect accept" data-act="accept" data-id="${c.id}">Kabul</button>
+        <button class="ghost comp-connect" data-act="decline" data-id="${c.id}">Reddet</button></div></div>`)
+      + group('Bağlantıların', accepted, (c) => `<div class="conn-row">${connPerson(c)}
+        <span class="conn-tag ok">Bağlısınız</span></div>`)
+      + group('Gönderilen istekler', outgoing, (c) => `<div class="conn-row">${connPerson(c)}
+        <span class="conn-tag">Bekliyor</span></div>`);
+    el.querySelectorAll('.comp-connect[data-act]').forEach((btn) => {
+      btn.onclick = async () => {
+        btn.disabled = true;
+        try { await respondConnection(btn.dataset.id, btn.dataset.act); renderConnections(); }
+        catch (e) { alert('İşlem başarısız: ' + e.message); btn.disabled = false; }
+      };
+    });
+  } catch (e) { el.innerHTML = `<div class="empty">Yüklenemedi: ${e.message}</div>`; }
+}
+function setConnBadge(n) {
+  const b = document.getElementById('pfConnBadge');
+  b.textContent = n || '';
+  b.hidden = !n;
+}
+async function refreshConnBadge() {              // profil acilinca gelen istek sayisi
+  if (!currentUser) return;
+  try { const { incoming } = await api('/api/connections'); setConnBadge(incoming.length); }
+  catch { /* sessiz */ }
 }
 
 let profileDictsBuilt = false;
@@ -988,6 +1067,7 @@ async function openProfile() {
   buildProfileDicts();
   showProfileSection('profil');
   setProfileNav();
+  refreshConnBadge();
   if (currentProfile) fillProfileForm(currentProfile);
   else { updateBioCount(); snapshotProfileForms(); }   // yeni profil: bos formu referans al
   document.getElementById('profileScreen').hidden = false;
