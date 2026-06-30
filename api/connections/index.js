@@ -1,10 +1,9 @@
-// Bağlantılar (eşlik istekleri) — v2 M3.
-// POST /api/connections {addressee_id, event_id}  -> istek gönder (veya karşı istek varsa kabul et)
-// GET  /api/connections                            -> { incoming, outgoing, accepted }
-// Erisim kontrolu burada (RLS yok). 18+ + want_company kapilari sunucuda dogrulanir.
-import { admin } from '../lib/supabase.js';
-import { getUser } from '../lib/auth.js';
-import { json, withErrors } from '../lib/http.js';
+// Bağlantılar (eşlik istekleri) — v2 M3.  /api/connections (bare): liste + olusturma.
+// Alt-uclar (PATCH/messages/report) connections/[...path].js'de. (events ile ayni desen.)
+// POST {addressee_id, event_id} -> istek gonder (karsi istek varsa kabul). GET -> {incoming,outgoing,accepted}
+import { admin } from '../../lib/supabase.js';
+import { getUser } from '../../lib/auth.js';
+import { json, withErrors } from '../../lib/http.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const is18 = (by) => Boolean(by) && new Date().getFullYear() - by >= 18;
@@ -59,20 +58,17 @@ export default withErrors(async (req, res) => {
   }
   if (addressee_id === user.id) { json(res, 400, { error: 'Kendine istek gönderemezsin' }); return; }
 
-  // 18+ kapisi (ben) + bu etkinlikte eslik aramayi acmis olmaliyim
   const { data: meProf } = await db.from('profiles').select('birth_year').eq('id', user.id).maybeSingle();
   if (!is18(meProf?.birth_year)) { json(res, 403, { error: 'Bu özellik 18+ gerektirir.' }); return; }
   const { data: myAtt } = await db.from('event_attendance').select('want_company').eq('user_id', user.id).eq('event_id', event_id).maybeSingle();
   if (!myAtt?.want_company) { json(res, 403, { error: 'Önce bu etkinlikte "Eşlik arıyorum"u aç.' }); return; }
 
-  // Karsi taraf da 18+ ve bu etkinlikte eslik ariyor olmali
   const { data: themProf } = await db.from('profiles').select('birth_year').eq('id', addressee_id).maybeSingle();
   const { data: theirAtt } = await db.from('event_attendance').select('want_company').eq('user_id', addressee_id).eq('event_id', event_id).maybeSingle();
   if (!is18(themProf?.birth_year) || !theirAtt?.want_company) {
     json(res, 400, { error: 'Bu kişi bu etkinlikte eşlik aramıyor.' }); return;
   }
 
-  // Bu etkinlik icin aramizda mevcut baglanti var mi? (her iki yon)
   const { data: mine } = await db.from('connections').select('*')
     .eq('event_id', event_id)
     .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
@@ -81,19 +77,17 @@ export default withErrors(async (req, res) => {
     if (ex.status === 'blocked') { json(res, 403, { error: 'Bu kullanıcıyla bağlantı kurulamaz.' }); return; }
     if (ex.status === 'accepted') { json(res, 200, { status: 'accepted', connection_id: ex.id }); return; }
     if (ex.status === 'pending') {
-      if (ex.addressee_id === user.id) {                       // onlar bana gondermis -> kabul
+      if (ex.addressee_id === user.id) {
         await db.from('connections').update({ status: 'accepted' }).eq('id', ex.id);
         json(res, 200, { status: 'accepted', connection_id: ex.id }); return;
       }
-      json(res, 200, { status: 'pending', connection_id: ex.id }); return;   // zaten gonderdim
+      json(res, 200, { status: 'pending', connection_id: ex.id }); return;
     }
-    // declined -> ben requester olarak yeniden pending'e cek
     await db.from('connections').update({ requester_id: user.id, addressee_id, status: 'pending' }).eq('id', ex.id);
     json(res, 200, { status: 'pending', connection_id: ex.id }); return;
   }
 
-  // Oran siniri: son 1 saatte 20 yeni istek (spam korumasi)
-  const since = new Date(Date.now() - 3600000).toISOString();
+  const since = new Date(Date.now() - 3600000).toISOString();   // oran siniri: 20 istek/saat
   const { count } = await db.from('connections')
     .select('id', { count: 'exact', head: true })
     .eq('requester_id', user.id).gte('created_at', since);
