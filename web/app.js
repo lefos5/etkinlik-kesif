@@ -1031,6 +1031,18 @@ document.getElementById('chatBlock').onclick = async () => {
     renderConnections();                              // baglantilar listesini tazele
   } catch (e) { alert('İşlem başarısız: ' + e.message); }
 };
+document.getElementById('chatReport').onclick = async () => {
+  if (!chatConnId) return;
+  const reason = prompt('Bu kişiyi neden bildiriyorsun? (opsiyonel)');
+  if (reason === null) return;                        // iptal
+  try {
+    await api('/api/reports', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ connection_id: chatConnId, reason }),
+    });
+    alert('Bildirimin alındı, teşekkürler. İncelenecek.');
+  } catch (e) { alert('Gönderilemedi: ' + e.message); }
+};
 document.getElementById('chatDialog').addEventListener('close', () => {
   clearInterval(chatTimer); chatTimer = null; chatConnId = null;   // polling'i durdur
 });

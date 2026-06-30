@@ -92,6 +92,13 @@ export default withErrors(async (req, res) => {
     json(res, 200, { status: 'pending', connection_id: ex.id }); return;
   }
 
+  // Oran siniri: son 1 saatte 20 yeni istek (spam korumasi)
+  const since = new Date(Date.now() - 3600000).toISOString();
+  const { count } = await db.from('connections')
+    .select('id', { count: 'exact', head: true })
+    .eq('requester_id', user.id).gte('created_at', since);
+  if ((count ?? 0) >= 20) { json(res, 429, { error: 'Çok fazla istek gönderdin, biraz sonra tekrar dene.' }); return; }
+
   const { data: created, error } = await db.from('connections')
     .insert({ requester_id: user.id, addressee_id, event_id, status: 'pending' })
     .select('id').single();

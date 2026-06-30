@@ -36,6 +36,14 @@ export default withErrors(async (req, res) => {
     const text = (body?.body || '').trim();
     if (!text) { json(res, 400, { error: 'Mesaj boş olamaz' }); return; }
     if (text.length > MAX_LEN) { json(res, 400, { error: `En fazla ${MAX_LEN} karakter` }); return; }
+
+    // Oran siniri: son 60 sn'de 30 mesaj (spam/bot korumasi)
+    const since = new Date(Date.now() - 60000).toISOString();
+    const { count } = await db.from('messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('sender_id', user.id).gte('created_at', since);
+    if ((count ?? 0) >= 30) { json(res, 429, { error: 'Çok hızlı mesaj gönderiyorsun, biraz bekle.' }); return; }
+
     const { data: msg, error } = await db.from('messages')
       .insert({ connection_id: connId, sender_id: user.id, body: text })
       .select('id, body, created_at').single();
