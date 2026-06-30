@@ -27,6 +27,42 @@ const store = {
   set notifDismissed(v) { localStorage.setItem('notifDismissed', JSON.stringify(v)); },
 };
 
+// ---- Toast / snackbar -------------------------------------------------------
+function toast(message, type = 'info') {        // type: 'ok' | 'err' | 'info'
+  const wrap = document.getElementById('toasts');
+  if (!wrap) return;
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const icon = type === 'ok' ? '✓' : type === 'err' ? '!' : 'ℹ';
+  el.innerHTML = `<span class="toast-ic">${icon}</span><span>${escapeHtml(message)}</span>`;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    el.addEventListener('transitionend', () => el.remove(), { once: true });
+  }, type === 'err' ? 4200 : 2800);
+}
+
+// ---- Boş durum + uyumluluk halkası (görsel yardımcılar) --------------------
+function emptyState(icon, title, sub = '') {
+  return `<div class="empty-state">
+    <div class="empty-ill">${icon}</div>
+    <div class="empty-title">${escapeHtml(title)}</div>
+    ${sub ? `<div class="empty-sub">${escapeHtml(sub)}</div>` : ''}
+  </div>`;
+}
+function scoreRing(score) {                       // 0-100 -> renkli dairesel gosterge
+  const r = 16, circ = 2 * Math.PI * r;
+  const off = circ * (1 - Math.max(0, Math.min(100, score)) / 100);
+  const color = score >= 70 ? '#2dd4bf' : score >= 40 ? '#fbbf24' : '#f87171';
+  return `<span class="score-ring" title="%${score} uyum">
+    <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
+      <circle cx="20" cy="20" r="${r}" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="4"/>
+      <circle cx="20" cy="20" r="${r}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round"
+        stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 20 20)"/>
+    </svg><span class="score-num">${score}</span></span>`;
+}
+
 // ---- Kaydet / favoriler -----------------------------------------------------
 const isSaved = (id) => store.saved.has(id);
 function toggleSaved(id) {
@@ -440,7 +476,7 @@ async function openDetail(id) {
         if (att?.status === status) { await clearAttendance(id); att = null; }   // ayni butona tekrar -> kaldir
         else att = await setAttendance(id, status, att ? att.want_company : true);
         paintRsvp(att);
-      } catch (e) { alert('İşlem başarısız: ' + e.message); }
+      } catch (e) { toast('İşlem başarısız: ' + e.message, 'err'); }
       finally { goingBtn.disabled = interestedBtn.disabled = false; }
     };
     goingBtn.onclick = () => choose('going');
@@ -448,7 +484,7 @@ async function openDetail(id) {
     wcCheck.onchange = async () => {
       if (!att) return;
       try { att = await setAttendance(id, att.status, wcCheck.checked); }
-      catch (e) { alert('İşlem başarısız: ' + e.message); wcCheck.checked = att.want_company; }
+      catch (e) { toast('İşlem başarısız: ' + e.message, 'err'); wcCheck.checked = att.want_company; }
     };
   } catch (e) {
     body.innerHTML = `<div class="muted">Detay yüklenemedi: ${e.message}</div>`;
@@ -464,7 +500,7 @@ async function openCompanions(eventId) {
   try {
     const { companions } = await api(`/api/events/${eventId}/companions`);
     if (!companions.length) {
-      body.innerHTML = '<div class="empty">Şimdilik bu etkinlikte eşlik arayan başka kimse yok. Daha sonra tekrar bak.</div>';
+      body.innerHTML = emptyState('🧑‍🤝‍🧑', 'Şimdilik kimse yok', 'Bu etkinlikte eşlik arayan başka biri olunca burada görünecek. Daha sonra tekrar bak.');
       return;
     }
     body.innerHTML = companions.map(companionCard).join('');
@@ -475,7 +511,7 @@ async function openCompanions(eventId) {
           if (btn.dataset.act === 'request') await sendConnection(btn.dataset.uid, eventId);
           else if (btn.dataset.act === 'accept') await respondConnection(btn.dataset.conn, 'accept');
           await openCompanions(eventId);            // listeyi tazele (buton durumlari guncellensin)
-        } catch (e) { alert('İşlem başarısız: ' + e.message); btn.disabled = false; }
+        } catch (e) { toast('İşlem başarısız: ' + e.message, 'err'); btn.disabled = false; }
       };
     });
   } catch (e) {
@@ -500,7 +536,7 @@ function companionCard(c) {
     <div class="companion">
       <div class="comp-avatar">${av}</div>
       <div class="comp-body">
-        <div class="comp-top"><span class="comp-nick">@${escapeHtml(c.nickname || '—')}</span><span class="comp-score">%${c.score} uyum</span></div>
+        <div class="comp-top"><span class="comp-nick">@${escapeHtml(c.nickname || '—')}</span>${scoreRing(c.score)}</div>
         <div class="comp-meta">${meta}</div>
         ${c.bio ? `<div class="comp-bio">${escapeHtml(c.bio)}</div>` : ''}
         <div class="comp-badges">${badges}</div>
@@ -527,7 +563,7 @@ async function loadSaved() {
   const el = document.getElementById('saved');
   const hint = document.getElementById('savedHint');
   if (!ids.length) {
-    el.innerHTML = '<div class="empty">Henüz etkinlik kaydetmedin. Kartlardaki ♥ ile kaydedebilirsin.</div>';
+    el.innerHTML = emptyState('🤍', 'Kaydettiğin etkinlik yok', 'Beğendiğin etkinliklerde kartın köşesindeki ♥ ile kaydet; hepsi burada toplansın.');
     hint.textContent = '';
     return;
   }
@@ -941,7 +977,8 @@ async function renderGoing() {
   el.innerHTML = '<div class="muted">Yükleniyor…</div>';
   try {
     const { events } = await api('/api/attendance');
-    renderInto(el, events, 'Henüz bir etkinliğe "Gideceğim/İlgileniyorum" demedin. Etkinlik detayından işaretleyebilirsin.');
+    if (!events.length) { el.innerHTML = emptyState('📅', 'Henüz planın yok', 'Bir etkinlik detayından "Gideceğim" ya da "İlgileniyorum" de; burada toplansın.'); return; }
+    renderInto(el, events, '');
   } catch (e) { el.innerHTML = `<div class="empty">Yüklenemedi: ${e.message}</div>`; }
 }
 
@@ -959,7 +996,7 @@ async function renderConnections() {
     const { incoming, outgoing, accepted } = await api('/api/connections');
     setConnBadge(incoming.length);
     if (!incoming.length && !outgoing.length && !accepted.length) {
-      el.innerHTML = '<div class="empty">Henüz bağlantın yok. Bir etkinlikte "Etkinlik arkadaşı bul" ile istek gönderebilirsin.</div>';
+      el.innerHTML = emptyState('🔗', 'Henüz bağlantın yok', 'Bir etkinlikte "Etkinlik arkadaşı bul" ile eşlik isteği gönder; kabul edilince burada görünür.');
       return;
     }
     const group = (title, items, render) => items.length
@@ -981,7 +1018,7 @@ async function renderConnections() {
           && !confirm('Bu kişiyi engelle? Bağlantınız kaldırılır, bir daha eşleşmezsiniz ve mesajlaşamazsınız.')) return;
         btn.disabled = true;
         try { await respondConnection(btn.dataset.id, btn.dataset.act); renderConnections(); refreshNotifications(); }
-        catch (e) { alert('İşlem başarısız: ' + e.message); btn.disabled = false; }
+        catch (e) { toast('İşlem başarısız: ' + e.message, 'err'); btn.disabled = false; }
       };
     });
     el.querySelectorAll('.chat-open').forEach((btn) => {
@@ -1025,7 +1062,7 @@ document.getElementById('chatForm').addEventListener('submit', async (e) => {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ body: text }),
     });
     await loadMessages();
-  } catch (err) { alert('Gönderilemedi: ' + err.message); inp.value = text; }
+  } catch (err) { toast('Gönderilemedi: ' + err.message, 'err'); inp.value = text; }
 });
 document.getElementById('chatClose').onclick = () => document.getElementById('chatDialog').close();
 document.getElementById('chatBlock').onclick = async () => {
@@ -1035,7 +1072,7 @@ document.getElementById('chatBlock').onclick = async () => {
     await respondConnection(chatConnId, 'block');
     document.getElementById('chatDialog').close();   // 'close' olayi chatConnId'yi temizler
     renderConnections();                              // baglantilar listesini tazele
-  } catch (e) { alert('İşlem başarısız: ' + e.message); }
+  } catch (e) { toast('İşlem başarısız: ' + e.message, 'err'); }
 };
 document.getElementById('chatReport').onclick = async () => {
   if (!chatConnId) return;
@@ -1046,8 +1083,8 @@ document.getElementById('chatReport').onclick = async () => {
       method: 'PATCH', headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ action: 'report', reason }),
     });
-    alert('Bildirimin alındı, teşekkürler. İncelenecek.');
-  } catch (e) { alert('Gönderilemedi: ' + e.message); }
+    toast('Bildirimin alındı, teşekkürler. İncelenecek.', 'ok');
+  } catch (e) { toast('Gönderilemedi: ' + e.message, 'err'); }
 };
 document.getElementById('chatDialog').addEventListener('close', () => {
   clearInterval(chatTimer); chatTimer = null; chatConnId = null;   // polling'i durdur
@@ -1267,7 +1304,7 @@ document.getElementById('pfAvatarInput').addEventListener('change', async (e) =>
     currentProfile = profile;
     renderProfileAvatar(document.getElementById('pfNavAvatar'), profile);
     updateAuthUI();
-  } catch (err) { alert('Fotoğraf yüklenemedi: ' + err.message); }
+  } catch (err) { toast('Fotoğraf yüklenemedi: ' + err.message, 'err'); }
   finally { e.target.value = ''; }
 });
 
@@ -1341,7 +1378,7 @@ document.getElementById('pfDelete').onclick = async () => {
   try {
     await api('/api/profile', { method: 'DELETE' });
     await signOut(); currentProfile = null; closeProfile();
-    alert('Hesabın silindi.');
+    toast('Hesabın silindi.', 'ok');
   } catch (e) { msg.className = 'note err'; msg.textContent = 'Silinemedi: ' + e.message; }
 };
 
