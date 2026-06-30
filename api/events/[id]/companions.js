@@ -27,7 +27,7 @@ export default withErrors(async (req, res) => {
   const { data: myAtt } = await db.from('event_attendance')
     .select('want_company').eq('user_id', user.id).eq('event_id', eventId).maybeSingle();
   if (!myAtt || !myAtt.want_company) {
-    json(res, 403, { error: 'Önce bu etkinlikte "Eşlik arıyorum"u aç.' });
+    json(res, 403, { error: 'Önce bu etkinlikte "Etkinlik arkadaşı arıyorum"u aç.' });
     return;
   }
 

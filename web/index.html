@@ -84,7 +84,20 @@
         <h1 id="authTitle">Giriş yap</h1>
         <form id="authForm">
           <div class="field" id="nameField" hidden>
-            <input id="authName" type="text" maxlength="60" placeholder="Ad" autocomplete="name" />
+            <input id="authName" type="text" maxlength="60" placeholder="Ad Soyad" autocomplete="name" />
+          </div>
+          <div class="field" id="signupExtra" hidden>
+            <div class="signup-row">
+              <select id="authGender" aria-label="Cinsiyet">
+                <option value="">Cinsiyet (opsiyonel)</option>
+                <option value="kadın">Kadın</option>
+                <option value="erkek">Erkek</option>
+                <option value="diğer">Diğer</option>
+              </select>
+              <select id="authBirthYear" aria-label="Doğum yılı">
+                <option value="">Doğum yılı</option>
+              </select>
+            </div>
           </div>
           <div class="field">
             <input id="authEmail" type="email" required placeholder="E-posta" autocomplete="email" />
@@ -102,7 +115,7 @@
           <a href="#" id="authForgot" class="auth-forgot">Şifremi unuttum</a>
           <label class="kvkk-check" id="kvkkField" hidden>
             <input type="checkbox" id="authKvkk" />
-            <span>Kişisel verilerin işlenmesine ilişkin aydınlatma metnini okudum, kabul ediyorum.</span>
+            <span>Kişisel verilerin işlenmesine ilişkin <button type="button" id="kvkkLink" class="link-btn">aydınlatma metnini</button> okudum, kabul ediyorum.</span>
           </label>
           <p id="authMsg" class="note"></p>
           <button type="submit" id="authSubmit" class="auth-submit">Giriş yap</button>
@@ -110,6 +123,25 @@
       </div>
     </div>
   </div>
+
+  <!-- KVKK aydınlatma metni -->
+  <dialog id="kvkkDialog" class="kvkk-dialog">
+    <button type="button" class="dialog-x" id="kvkkClose" aria-label="Kapat">✕</button>
+    <h2>Aydınlatma Metni (KVKK)</h2>
+    <div class="kvkk-body">
+      <p><strong>Nereye?</strong> ("Platform") olarak, 6698 sayılı Kişisel Verilerin Korunması Kanunu ("KVKK") kapsamında veri sorumlusu sıfatıyla kişisel verilerinizi aşağıda açıklandığı şekilde işliyoruz.</p>
+      <h3>İşlenen veriler</h3>
+      <p>Ad-soyad, e-posta, doğum yılı, cinsiyet, ilgi alanları, semt bilgisi, profil fotoğrafı; etkinlik etkileşimleriniz (kaydetme, "gideceğim/ilgileniyorum"), etkinlik arkadaşı eşleştirmesi ve uygulama içi mesajlaşma verileri.</p>
+      <h3>İşleme amaçları</h3>
+      <p>Hesabınızın oluşturulması ve yönetimi; size uygun etkinliklerin kişiselleştirilmiş önerilmesi; "etkinlik arkadaşı" eşleştirmesinin sağlanması; güvenlik, kötüye kullanımın önlenmesi ve yasal yükümlülüklerin yerine getirilmesi.</p>
+      <h3>Hukuki sebep ve aktarım</h3>
+      <p>Verileriniz, açık rızanız ve hizmetin sunulması için gerekli olması hukuki sebeplerine dayanılarak işlenir. Barındırma ve kimlik doğrulama hizmeti için altyapı sağlayıcılarımıza (ör. Supabase) aktarılabilir; üçüncü taraflara pazarlama amacıyla satılmaz.</p>
+      <h3>Haklarınız (KVKK md. 11)</h3>
+      <p>Verilerinizin işlenip işlenmediğini öğrenme, düzeltilmesini/silinmesini isteme, işlemeye itiraz etme ve hesabınızı dilediğiniz zaman silme hakkına sahipsiniz. Hesabınızı sildiğinizde profil, etkileşim ve eşleşme verileriniz kalıcı olarak silinir.</p>
+      <p class="muted">Bu metin bilgilendirme amaçlıdır; nihai sürümde hukuki danışmanlıkla güncellenmelidir.</p>
+    </div>
+    <form method="dialog"><menu><button class="ghost">Kapat</button></menu></form>
+  </dialog>
 
   <!-- Yeni sifre belirle (sifre sifirlama linkinden donunce) -->
   <dialog id="resetDialog">
@@ -139,7 +171,7 @@
       </div>
       <nav class="profile-nav-list">
         <button type="button" class="pnav active" data-sec="profil">Profil</button>
-        <button type="button" class="pnav" data-sec="gidecekler">Gideceklerim</button>
+        <button type="button" class="pnav" data-sec="gidecekler">Etkinliklerim</button>
         <button type="button" class="pnav" data-sec="baglantilar">Bağlantılar <span id="pfConnBadge" class="nav-badge" hidden></span></button>
         <button type="button" class="pnav" data-sec="esles">Eşleştirme</button>
         <button type="button" class="pnav" data-sec="hesap">Hesap</button>
@@ -174,9 +206,9 @@
       </section>
 
       <section class="psec" data-sec="gidecekler" hidden>
-        <h2>Gideceklerim</h2>
-        <p class="muted note">"Gideceğim" / "İlgileniyorum" işaretlediğin etkinlikler.</p>
-        <div id="pfGoing" class="grid going-list"></div>
+        <h2>Etkinliklerim</h2>
+        <p class="muted note">Detaydan işaretlediğin etkinlikler — Gideceğim ve İlgileniyorum ayrı.</p>
+        <div id="pfGoing" class="going-list"></div>
       </section>
 
       <section class="psec" data-sec="baglantilar" hidden>
@@ -269,8 +301,14 @@
   <!-- Eşlik bul (eşleşme adayları) -->
   <dialog id="companionsDialog" class="companions-dialog">
     <h2>Etkinlik arkadaşı bul</h2>
-    <p class="muted note">Bu etkinliğe gidecek/ilgilenen, eşlik arayan kişiler — uyumluluğa göre sıralı.</p>
+    <p class="muted note">Bu etkinliğe gidecek/ilgilenen, etkinlik arkadaşı arayan kişiler — uyumluluğa göre sıralı.</p>
     <div id="companionsBody" class="companions-list"></div>
+    <form method="dialog"><menu><button class="ghost">Kapat</button></menu></form>
+  </dialog>
+
+  <!-- Profil inceleme (bağlantı/aday) -->
+  <dialog id="profilePreviewDialog" class="preview-dialog">
+    <div id="profilePreviewBody" class="preview-body"></div>
     <form method="dialog"><menu><button class="ghost">Kapat</button></menu></form>
   </dialog>
 

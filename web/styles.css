@@ -62,6 +62,9 @@ body {
 .want-company .soon { font-size: .78rem; opacity: .7; }
 .find-companions { margin: 8px 0 2px; }
 .going-list { margin-top: 10px; }
+.going-group-title { font-family: var(--font-display); font-size: 1.02rem; font-weight: 600; color: var(--muted);
+  margin: 22px 0 12px; }
+.going-group-title:first-child { margin-top: 4px; }
 
 /* Eşlik bul — aday kartları */
 .companions-dialog { max-width: 540px; }
@@ -94,6 +97,21 @@ body {
 .conn-tag { margin-left: auto; font-size: .8rem; color: var(--muted); }
 .conn-tag.ok { color: var(--teal); }
 .conn-row .chat-open { margin-left: auto; }
+.conn-person { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; background: transparent;
+  border: none; padding: 0; text-align: left; cursor: pointer; }
+.conn-person:hover { filter: none; }
+.conn-person:hover .comp-nick { filter: brightness(1.2); }
+.conn-person .comp-nick { transition: filter .15s ease; }
+
+/* Profil inceleme */
+.preview-dialog { max-width: 440px; }
+.preview-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.preview-avatar { width: 64px; height: 64px; border-radius: 50%; overflow: hidden; display: flex; align-items: center;
+  justify-content: center; background: var(--grad-soft); font-weight: 600; font-size: 1.3rem; flex: 0 0 auto; }
+.preview-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.preview-nick { font-family: var(--font-display); font-weight: 600; font-size: 1.2rem; color: var(--accent-2); }
+.preview-meta { font-size: .86rem; color: var(--muted); margin-top: 2px; }
+.preview-bio { font-size: .92rem; line-height: 1.5; margin: 0; }
 
 /* Sohbet */
 .chat-dialog { max-width: 440px; }
@@ -331,6 +349,14 @@ dialog input:focus, dialog textarea:focus, .auth-screen input:focus,
 .auth-form-wrap h1 { font-family: var(--font-display); font-size: 1.85rem; margin: 0 0 26px; }
 .kvkk-check { display: flex; gap: 9px; align-items: flex-start; font-size: .82rem; color: var(--muted); margin-top: 14px; cursor: pointer; }
 .kvkk-check input { width: 17px; height: 17px; accent-color: var(--accent); flex: 0 0 auto; margin-top: 1px; }
+.link-btn { background: transparent; border: none; padding: 0; color: var(--accent-2); text-decoration: underline;
+  cursor: pointer; font: inherit; }
+.link-btn:hover { filter: brightness(1.18); }
+.kvkk-dialog { max-width: 580px; }
+.kvkk-body { max-height: 58vh; overflow-y: auto; font-size: .9rem; line-height: 1.55; }
+.kvkk-body h3 { font-family: var(--font-display); font-size: .98rem; margin: 16px 0 4px; color: var(--text); }
+.kvkk-body p { margin: 0 0 8px; color: var(--muted); }
+.kvkk-body strong { color: var(--text); }
 @media (max-width: 760px) {
   .auth-left { display: none; }
   .auth-right { flex: 1; max-width: 100%; padding: 56px 22px 30px; }
@@ -406,12 +432,14 @@ dialog input:focus, dialog textarea:focus, .auth-screen input:focus,
 .psec .note { display: block; margin-top: 10px; }
 .ghost.danger { color: #f87171; border-color: rgba(248,113,113,.3); }
 .ghost.danger:hover { border-color: #f87171; filter: none; }
-dialog select, .profile-screen select {
+dialog select, .profile-screen select, .auth-screen select {
   display: block; width: 100%; box-sizing: border-box; font: inherit; color: var(--text);
   background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 11px 13px; outline: none; margin-top: 6px; cursor: pointer;
 }
-.profile-screen select:focus { border-color: var(--accent); }
-.profile-screen select option { background: var(--bg-2); }
+.profile-screen select:focus, .auth-screen select:focus { border-color: var(--accent); }
+.profile-screen select option, .auth-screen select option { background: var(--bg-2); }
+.signup-row { display: flex; gap: 10px; }
+.signup-row select { flex: 1; min-width: 0; margin-top: 0; }
 @media (max-width: 760px) {
   .profile-screen { flex-direction: column; }
   .profile-nav { flex: 0 0 auto; flex-direction: row; align-items: center; gap: 14px; padding: 20px 16px 14px; }

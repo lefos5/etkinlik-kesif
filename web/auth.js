@@ -37,14 +37,15 @@ export async function uploadAvatar(file) {
   return `${data.publicUrl}?t=${Date.now()}`;   // cache-bust
 }
 
-/** Kayit ol — dogrulama e-postasi gonderilir (link uygulamaya geri doner). */
-export function signUp(email, password, displayName) {
+/** Kayit ol — dogrulama e-postasi gonderilir. meta: { display_name, gender, birth_year } (profile'a tasinir). */
+export function signUp(email, password, meta = {}) {
+  const data = {};
+  if (meta.display_name) data.display_name = meta.display_name;
+  if (meta.gender) data.gender = meta.gender;
+  if (meta.birth_year) data.birth_year = meta.birth_year;
   return supa.auth.signUp({
     email, password,
-    options: {
-      emailRedirectTo: window.location.origin,
-      data: displayName ? { display_name: displayName } : undefined,
-    },
+    options: { emailRedirectTo: window.location.origin, data },
   });
 }
 

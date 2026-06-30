@@ -54,9 +54,14 @@ export default withErrors(async (req, res) => {
   let { data: profile, error } = await db.from('profiles').select('*').eq('id', user.id).maybeSingle();
   if (error) throw error;
   if (!profile) {
-    const fallbackName = user.user_metadata?.display_name || (user.email || '').split('@')[0] || 'Kullanıcı';
+    const md = user.user_metadata || {};
+    const fallbackName = md.display_name || (user.email || '').split('@')[0] || 'Kullanıcı';
+    const insert = { id: user.id, display_name: fallbackName };           // kayit formundan gelen meta'yi tasi
+    if (['kadın', 'erkek', 'diğer'].includes(md.gender)) insert.gender = md.gender;
+    const by = Number(md.birth_year);
+    if (Number.isInteger(by) && by >= 1925 && by <= new Date().getFullYear() - 13) insert.birth_year = by;
     ({ data: profile, error } = await db.from('profiles')
-      .insert({ id: user.id, display_name: fallbackName }).select('*').single());
+      .insert(insert).select('*').single());
     if (error) throw error;
   }
   json(res, 200, { profile });

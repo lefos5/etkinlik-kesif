@@ -4,6 +4,7 @@
 import { admin } from '../../lib/supabase.js';
 import { getUser } from '../../lib/auth.js';
 import { json, withErrors } from '../../lib/http.js';
+import { ageBand } from '../../lib/match.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const is18 = (by) => Boolean(by) && new Date().getFullYear() - by >= 18;
@@ -24,10 +25,15 @@ export default withErrors(async (req, res) => {
     const otherIds = [...new Set(rows.map((c) => (c.requester_id === user.id ? c.addressee_id : c.requester_id)))];
     const eventIds = [...new Set(rows.map((c) => c.event_id).filter(Boolean))];
     const [{ data: profs }, { data: events }] = await Promise.all([
-      otherIds.length ? db.from('profiles').select('id, nickname, avatar_url').in('id', otherIds) : Promise.resolve({ data: [] }),
+      otherIds.length ? db.from('profiles').select('id, nickname, avatar_url, bio, interests, district, birth_year').in('id', otherIds) : Promise.resolve({ data: [] }),
       eventIds.length ? db.from('events').select('id, title, start_at').in('id', eventIds) : Promise.resolve({ data: [] }),
     ]);
-    const pMap = Object.fromEntries((profs ?? []).map((p) => [p.id, p]));
+    const now = new Date();
+    // Gizlilik: kesin dogum yili yerine yas bandi gonder
+    const pMap = Object.fromEntries((profs ?? []).map((p) => [p.id, {
+      id: p.id, nickname: p.nickname, avatar_url: p.avatar_url, bio: p.bio,
+      interests: p.interests || [], district: p.district, age_band: ageBand(p.birth_year, now),
+    }]));
     const eMap = Object.fromEntries((events ?? []).map((e) => [e.id, e]));
     const shape = (c) => {
       const otherId = c.requester_id === user.id ? c.addressee_id : c.requester_id;
@@ -84,12 +90,12 @@ export default withErrors(async (req, res) => {
   const { data: meProf } = await db.from('profiles').select('birth_year').eq('id', user.id).maybeSingle();
   if (!is18(meProf?.birth_year)) { json(res, 403, { error: 'Bu özellik 18+ gerektirir.' }); return; }
   const { data: myAtt } = await db.from('event_attendance').select('want_company').eq('user_id', user.id).eq('event_id', event_id).maybeSingle();
-  if (!myAtt?.want_company) { json(res, 403, { error: 'Önce bu etkinlikte "Eşlik arıyorum"u aç.' }); return; }
+  if (!myAtt?.want_company) { json(res, 403, { error: 'Önce bu etkinlikte "Etkinlik arkadaşı arıyorum"u aç.' }); return; }
 
   const { data: themProf } = await db.from('profiles').select('birth_year').eq('id', addressee_id).maybeSingle();
   const { data: theirAtt } = await db.from('event_attendance').select('want_company').eq('user_id', addressee_id).eq('event_id', event_id).maybeSingle();
   if (!is18(themProf?.birth_year) || !theirAtt?.want_company) {
-    json(res, 400, { error: 'Bu kişi bu etkinlikte eşlik aramıyor.' }); return;
+    json(res, 400, { error: 'Bu kişi bu etkinlikte etkinlik arkadaşı aramıyor.' }); return;
   }
 
   const { data: mine } = await db.from('connections').select('*')

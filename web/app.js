@@ -405,7 +405,7 @@ async function openDetail(id) {
       </div>
       <label id="wantCompanyRow" class="want-company" hidden>
         <input type="checkbox" id="wantCompany" />
-        <span>Eşlik arıyorum — bu etkinliğe birlikte gidecek biriyle eşleş</span>
+        <span>Etkinlik arkadaşı arıyorum — bu etkinliğe birlikte gidecek biriyle eşleş</span>
       </label>
       <button id="findCompanions" type="button" class="ghost find-companions" hidden>🧑‍🤝‍🧑 Etkinlik arkadaşı bul</button>
       <div class="detail-info">${info}</div>
@@ -465,7 +465,7 @@ async function openCompanions(eventId) {
   try {
     const { companions } = await api(`/api/events/${eventId}/companions`);
     if (!companions.length) {
-      body.innerHTML = emptyState('🧑‍🤝‍🧑', 'Şimdilik kimse yok', 'Bu etkinlikte eşlik arayan başka biri olunca burada görünecek. Daha sonra tekrar bak.');
+      body.innerHTML = emptyState('🧑‍🤝‍🧑', 'Şimdilik kimse yok', 'Bu etkinlikte etkinlik arkadaşı arayan başka biri olunca burada görünecek. Daha sonra tekrar bak.');
       return;
     }
     body.innerHTML = companions.map(companionCard).join('');
@@ -488,7 +488,7 @@ function connectButton(c) {
   if (conn?.status === 'accepted') return '<button class="comp-connect on" type="button" disabled>Bağlandınız ✓</button>';
   if (conn?.status === 'pending' && conn.direction === 'outgoing') return '<button class="ghost comp-connect" type="button" disabled>İstek gönderildi</button>';
   if (conn?.status === 'pending' && conn.direction === 'incoming') return `<button class="comp-connect accept" type="button" data-act="accept" data-conn="${conn.id}">Kabul et</button>`;
-  return `<button class="ghost comp-connect" type="button" data-act="request" data-uid="${escapeHtml(c.id)}">Eşlik isteği gönder</button>`;
+  return `<button class="ghost comp-connect" type="button" data-act="request" data-uid="${escapeHtml(c.id)}">Arkadaşlık isteği gönder</button>`;
 }
 function companionCard(c) {
   const av = c.avatar_url
@@ -746,7 +746,14 @@ function setAuthMode(mode) {
   document.getElementById('authSwitchText').textContent = signup ? 'Zaten hesabın var mı?' : 'Hesabın yok mu?';
   document.getElementById('authSwitchBtn').textContent = signup ? 'Giriş yap' : 'Kayıt ol';
   document.getElementById('nameField').hidden = !signup;
+  document.getElementById('signupExtra').hidden = !signup;
   document.getElementById('kvkkField').hidden = !signup;
+  if (signup && !document.getElementById('authBirthYear').dataset.filled) {
+    const by = document.getElementById('authBirthYear');
+    const now = new Date().getFullYear();
+    for (let y = now - 13; y >= 1925; y--) by.appendChild(new Option(y, y));
+    by.dataset.filled = '1';
+  }
   document.getElementById('authForgot').style.display = signup ? 'none' : 'inline';
   document.getElementById('authKvkk').checked = false;
   const pw = document.getElementById('authPassword');
@@ -841,6 +848,11 @@ document.getElementById('authForgot').addEventListener('click', async (e) => {
   }
 });
 
+document.getElementById('kvkkLink').addEventListener('click', (e) => {
+  e.preventDefault(); e.stopPropagation();            // checkbox'i tetikleme
+  document.getElementById('kvkkDialog').showModal();
+});
+document.getElementById('kvkkClose').onclick = () => document.getElementById('kvkkDialog').close();
 document.getElementById('authForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('authEmail').value.trim();
@@ -865,7 +877,14 @@ document.getElementById('authForm').addEventListener('submit', async (e) => {
         btn.disabled = false; return;
       }
       const name = document.getElementById('authName').value.trim();
-      const { data, error } = await signUp(email, password, name);
+      if (!name) {
+        msg.className = 'note err'; msg.textContent = 'Ad Soyad gerekli.';
+        btn.disabled = false; return;
+      }
+      const gender = document.getElementById('authGender').value || undefined;
+      const byVal = document.getElementById('authBirthYear').value;
+      const meta = { display_name: name, gender, birth_year: byVal ? parseInt(byVal, 10) : undefined };
+      const { data, error } = await signUp(email, password, meta);
       if (error) throw error;
       // Dogrulama acik ise session null doner -> giris ekranina dondur (bos kutular)
       if (!data.session) {
@@ -913,16 +932,45 @@ async function renderGoing() {
   try {
     const { events } = await api('/api/attendance');
     if (!events.length) { el.innerHTML = emptyState('📅', 'Henüz planın yok', 'Bir etkinlik detayından "Gideceğim" ya da "İlgileniyorum" de; burada toplansın.'); return; }
-    renderInto(el, events, '');
+    el.innerHTML = '';
+    const section = (title, list) => {        // gruplari ayri grid'lerde basliklarla goster
+      if (!list.length) return;
+      const h = document.createElement('h3');
+      h.className = 'going-group-title';
+      h.textContent = `${title} (${list.length})`;
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+      el.appendChild(h); el.appendChild(grid);
+      renderInto(grid, list, '');
+    };
+    section('✅ Gideceğim', events.filter((e) => e._rsvp === 'going'));
+    section('⭐ İlgileniyorum', events.filter((e) => e._rsvp === 'interested'));
   } catch (e) { el.innerHTML = `<div class="empty">Yüklenemedi: ${e.message}</div>`; }
 }
 
 // ---- Bağlantılar görünümü (v2 M3) ------------------------------------------
-function connPerson(c) {                       // ortak: avatar + @nick + etkinlik satiri
+const catLabel = (slug) => (CATEGORIES.find((c) => c[0] === slug) || [, slug])[1];
+let connOtherById = {};                        // baglanti id -> karsi profil (inceleme icin)
+function connPerson(c) {                        // tiklanabilir: avatar + @nick + etkinlik satiri
   const av = c.other?.avatar_url ? `<img src="${escapeHtml(c.other.avatar_url)}" alt="">` : escapeHtml(initials(c.other?.nickname || '?'));
   const ev = c.event?.title ? `<div class="conn-event">${escapeHtml(c.event.title)}</div>` : '';
-  return `<div class="comp-avatar">${av}</div>
-    <div class="comp-body"><div class="comp-nick">@${escapeHtml(c.other?.nickname || '—')}</div>${ev}</div>`;
+  return `<button type="button" class="conn-person" data-cid="${c.id}" title="Profili gör">
+    <div class="comp-avatar">${av}</div>
+    <div class="comp-body"><div class="comp-nick">@${escapeHtml(c.other?.nickname || '—')}</div>${ev}</div></button>`;
+}
+function openProfilePreview(p) {
+  if (!p) return;
+  const av = p.avatar_url ? `<img src="${escapeHtml(p.avatar_url)}" alt="">` : escapeHtml(initials(p.nickname || '?'));
+  const meta = [p.district, p.age_band].filter(Boolean).map(escapeHtml).join(' · ');
+  const interests = (p.interests || []).map((s) => `<span class="badge">${escapeHtml(catLabel(s))}</span>`).join('');
+  document.getElementById('profilePreviewBody').innerHTML = `
+    <div class="preview-head">
+      <div class="preview-avatar">${av}</div>
+      <div><div class="preview-nick">@${escapeHtml(p.nickname || '—')}</div>${meta ? `<div class="preview-meta">${meta}</div>` : ''}</div>
+    </div>
+    ${p.bio ? `<p class="preview-bio">${escapeHtml(p.bio)}</p>` : '<p class="muted preview-bio">Hakkında bilgisi yok.</p>'}
+    ${interests ? `<div class="field-label" style="margin-top:14px">İlgi alanları</div><div class="cats">${interests}</div>` : ''}`;
+  document.getElementById('profilePreviewDialog').showModal();
 }
 async function renderConnections() {
   const el = document.getElementById('pfConnections');
@@ -930,8 +978,10 @@ async function renderConnections() {
   try {
     const { incoming, outgoing, accepted } = await api('/api/connections');
     setConnBadge(incoming.length);
+    connOtherById = {};
+    [...incoming, ...outgoing, ...accepted].forEach((c) => { connOtherById[c.id] = c.other; });
     if (!incoming.length && !outgoing.length && !accepted.length) {
-      el.innerHTML = emptyState('🔗', 'Henüz bağlantın yok', 'Bir etkinlikte "Etkinlik arkadaşı bul" ile eşlik isteği gönder; kabul edilince burada görünür.');
+      el.innerHTML = emptyState('🔗', 'Henüz bağlantın yok', 'Bir etkinlikte "Etkinlik arkadaşı bul" ile arkadaşlık isteği gönder; kabul edilince burada görünür.');
       return;
     }
     const group = (title, items, render) => items.length
@@ -958,6 +1008,9 @@ async function renderConnections() {
     });
     el.querySelectorAll('.chat-open').forEach((btn) => {
       btn.onclick = () => openChat(btn.dataset.id, btn.dataset.nick);
+    });
+    el.querySelectorAll('.conn-person').forEach((b) => {
+      b.onclick = () => openProfilePreview(connOtherById[b.dataset.cid]);
     });
   } catch (e) { el.innerHTML = `<div class="empty">Yüklenemedi: ${e.message}</div>`; }
 }
@@ -1036,7 +1089,7 @@ async function refreshNotifications() {
     const [conns, att] = await Promise.all([api('/api/connections'), api('/api/attendance')]);
     // Gelen eslik istekleri
     if (conns.incoming?.length) {
-      items.push({ icon: '🤝', text: `${conns.incoming.length} yeni eşlik isteği`, act: 'requests' });
+      items.push({ icon: '🤝', text: `${conns.incoming.length} yeni arkadaşlık isteği`, act: 'requests' });
     }
     (conns.accepted || []).forEach((c) => {
       const nick = c.other?.nickname || '—';
@@ -1382,7 +1435,7 @@ onAuth((user, event) => {
 });
 
 // Backdrop'a (kutu disina) tiklayinca kapat. (Esc zaten native kapatir.)
-['detailDialog', 'prefsDialog', 'calDialog', 'companionsDialog', 'chatDialog'].forEach((dlgId) => {
+['detailDialog', 'prefsDialog', 'calDialog', 'companionsDialog', 'chatDialog', 'kvkkDialog', 'profilePreviewDialog'].forEach((dlgId) => {
   const dlg = document.getElementById(dlgId);
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 });
