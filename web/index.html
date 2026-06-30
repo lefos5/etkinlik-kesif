@@ -15,6 +15,10 @@
     <div class="topbar-actions">
       <button id="savedBtn" class="ghost">♥ <span class="lbl">Kaydettiklerim</span> <span id="savedCount" class="count"></span></button>
       <button id="prefsBtn" class="ghost">İlgi Alanlarım</button>
+      <div class="notif-wrap">
+        <button id="notifBtn" class="ghost notif-btn" hidden aria-label="Bildirimler">🔔<span id="notifBadge" class="notif-badge" hidden></span></button>
+        <div id="notifPanel" class="notif-panel" hidden></div>
+      </div>
       <button id="authBtn" class="ghost">Giriş</button>
     </div>
   </header>
@@ -35,8 +39,6 @@
   </dialog>
 
   <main>
-    <div id="notifBar" class="notif-bar" hidden></div>
-
     <section id="savedSection" hidden>
       <div class="hero">
         <h1><span class="grad-text">Kaydettiklerim</span></h1>

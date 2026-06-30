@@ -1093,8 +1093,7 @@ document.getElementById('chatDialog').addEventListener('close', () => {
 let notifTimer = null;
 let notifItems = [];
 async function refreshNotifications() {
-  const bar = document.getElementById('notifBar');
-  if (!currentUser) { bar.hidden = true; bar.innerHTML = ''; return; }
+  if (!currentUser) { notifItems = []; renderNotif(); return; }
   const items = [];
   try {
     const [conns, att] = await Promise.all([api('/api/connections'), api('/api/attendance')]);
@@ -1129,19 +1128,26 @@ async function refreshNotifications() {
     });
   } catch { return; }                                  // hata: sessiz (poll)
   notifItems = items;
-  renderNotifBar();
+  renderNotif();
 }
-function renderNotifBar() {
-  const bar = document.getElementById('notifBar');
-  if (!notifItems.length) { bar.hidden = true; bar.innerHTML = ''; return; }
-  bar.hidden = false;
-  bar.innerHTML = notifItems.map((it, i) =>
+function renderNotif() {
+  const btn = document.getElementById('notifBtn');
+  const badge = document.getElementById('notifBadge');
+  const panel = document.getElementById('notifPanel');
+  btn.hidden = !currentUser;                          // giris yapinca zil hep gorunur
+  const n = notifItems.length;
+  badge.textContent = n; badge.hidden = !n;
+  if (!n) {
+    panel.innerHTML = '<div class="notif-empty">Yeni bildirim yok 🔔</div>';
+    return;
+  }
+  panel.innerHTML = notifItems.map((it, i) =>
     `<div class="notif-item" data-i="${i}">
        <span class="notif-ic">${it.icon}</span>
        <span class="notif-tx">${escapeHtml(it.text)}</span>
        ${it.dismissKey ? `<button class="notif-x" aria-label="Kapat">✕</button>` : ''}
      </div>`).join('');
-  bar.querySelectorAll('.notif-item').forEach((el) => {
+  panel.querySelectorAll('.notif-item').forEach((el) => {
     const it = notifItems[+el.dataset.i];
     el.addEventListener('click', (e) => {
       if (e.target.closest('.notif-x')) {
@@ -1149,6 +1155,7 @@ function renderNotifBar() {
         refreshNotifications();
         return;
       }
+      panel.hidden = true;
       notifAction(it);
     });
   });
@@ -1158,6 +1165,16 @@ function notifAction(it) {
   else if (it.act === 'chat') { openChat(it.connId, it.nick); }
   else if (it.act === 'event') { openDetail(it.eventId); }
 }
+document.getElementById('notifBtn').onclick = (e) => {
+  e.stopPropagation();
+  const panel = document.getElementById('notifPanel');
+  panel.hidden = !panel.hidden;
+  if (!panel.hidden) refreshNotifications();          // acarken tazele
+};
+document.addEventListener('click', (e) => {           // dis tiklama -> paneli kapat
+  const panel = document.getElementById('notifPanel');
+  if (!panel.hidden && !e.target.closest('.notif-wrap')) panel.hidden = true;
+});
 function startNotifPoll() {
   clearInterval(notifTimer);
   refreshNotifications();
@@ -1165,7 +1182,8 @@ function startNotifPoll() {
 }
 function stopNotifPoll() {
   clearInterval(notifTimer); notifTimer = null;
-  const bar = document.getElementById('notifBar'); bar.hidden = true; bar.innerHTML = '';
+  document.getElementById('notifBtn').hidden = true;
+  document.getElementById('notifPanel').hidden = true;
 }
 function setConnBadge(n) {
   const b = document.getElementById('pfConnBadge');
