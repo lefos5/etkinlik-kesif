@@ -962,13 +962,18 @@ async function renderConnections() {
     el.innerHTML =
       group('Gelen istekler', incoming, (c) => `<div class="conn-row">${connPerson(c)}
         <div class="conn-actions"><button class="comp-connect accept" data-act="accept" data-id="${c.id}">Kabul</button>
-        <button class="ghost comp-connect" data-act="decline" data-id="${c.id}">Reddet</button></div></div>`)
+        <button class="ghost comp-connect" data-act="decline" data-id="${c.id}">Reddet</button>
+        <button class="ghost comp-connect block-btn" data-act="block" data-id="${c.id}" title="Engelle">⊘</button></div></div>`)
       + group('Bağlantıların', accepted, (c) => `<div class="conn-row">${connPerson(c)}
-        <button class="comp-connect chat-open" data-id="${c.id}" data-nick="${escapeHtml(c.other?.nickname || '')}">💬 Sohbet</button></div>`)
+        <div class="conn-actions"><button class="comp-connect chat-open" data-id="${c.id}" data-nick="${escapeHtml(c.other?.nickname || '')}">💬 Sohbet</button>
+        <button class="ghost comp-connect block-btn" data-act="block" data-id="${c.id}" title="Engelle">⊘</button></div></div>`)
       + group('Gönderilen istekler', outgoing, (c) => `<div class="conn-row">${connPerson(c)}
-        <span class="conn-tag">Bekliyor</span></div>`);
+        <div class="conn-actions"><span class="conn-tag">Bekliyor</span>
+        <button class="ghost comp-connect block-btn" data-act="block" data-id="${c.id}" title="Engelle">⊘</button></div></div>`);
     el.querySelectorAll('.comp-connect[data-act]').forEach((btn) => {
       btn.onclick = async () => {
+        if (btn.dataset.act === 'block'
+          && !confirm('Bu kişiyi engelle? Bağlantınız kaldırılır, bir daha eşleşmezsiniz ve mesajlaşamazsınız.')) return;
         btn.disabled = true;
         try { await respondConnection(btn.dataset.id, btn.dataset.act); renderConnections(); }
         catch (e) { alert('İşlem başarısız: ' + e.message); btn.disabled = false; }
@@ -1017,6 +1022,15 @@ document.getElementById('chatForm').addEventListener('submit', async (e) => {
   } catch (err) { alert('Gönderilemedi: ' + err.message); inp.value = text; }
 });
 document.getElementById('chatClose').onclick = () => document.getElementById('chatDialog').close();
+document.getElementById('chatBlock').onclick = async () => {
+  if (!chatConnId) return;
+  if (!confirm('Bu kişiyi engelle? Bağlantınız kaldırılır, bir daha eşleşmezsiniz ve mesajlaşamazsınız.')) return;
+  try {
+    await respondConnection(chatConnId, 'block');
+    document.getElementById('chatDialog').close();   // 'close' olayi chatConnId'yi temizler
+    renderConnections();                              // baglantilar listesini tazele
+  } catch (e) { alert('İşlem başarısız: ' + e.message); }
+};
 document.getElementById('chatDialog').addEventListener('close', () => {
   clearInterval(chatTimer); chatTimer = null; chatConnId = null;   // polling'i durdur
 });

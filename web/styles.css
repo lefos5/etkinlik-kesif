@@ -97,8 +97,13 @@ body {
 
 /* Sohbet */
 .chat-dialog { max-width: 440px; }
-.chat-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.chat-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.chat-head-actions { display: flex; align-items: center; gap: 6px; }
 .chat-title { font-weight: 600; color: var(--accent-2); }
+.chat-block { background: transparent; border: 1px solid var(--border); color: var(--muted); font-size: .8rem; padding: 5px 11px; border-radius: 999px; }
+.chat-block:hover { border-color: rgba(248,113,113,.5); color: #f87171; filter: none; }
+.block-btn { padding: 6px 10px; color: var(--muted); }
+.block-btn:hover { border-color: rgba(248,113,113,.5); color: #f87171; filter: none; }
 .chat-x { background: transparent; color: var(--muted); padding: 4px 9px; border-radius: 8px; font-size: 1rem; }
 .chat-x:hover { background: var(--surface-2); color: var(--text); filter: none; }
 .chat-messages { display: flex; flex-direction: column; gap: 6px; height: 52vh; overflow-y: auto; padding: 4px 2px; }

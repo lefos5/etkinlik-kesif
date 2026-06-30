@@ -136,7 +136,7 @@ deseni gibi `node --test`). Kural ağırlıkları:
 - **M2 — Adaylar + skorlama:** ✅ **TAMAM** — `lib/match.js` (+ testler) + `companions` API + "Etkinlik arkadaşı bul" ekranı. `v2-rsvp` branch'inde.
 - **M3 — Bağlantılar:** ✅ **TAMAM** — `api/connections.js` + `[id].js` (PATCH) + profil "Bağlantılar" sekmesi + nav rozeti + aday kartı işlevsel butonu.
 - **M4 — Mesajlaşma:** ✅ **TAMAM** — `api/connections/[id]/messages.js` + sohbet dialog (polling 4sn). Yalnız accepted bağlantıda.
-- **M5 — Cila/güvenlik:** engelleme UI, raporlama iskeleti, oran sınırı, boş durumlar. (Sıradaki.)
+- **M5 — Cila/güvenlik:** ✅ Engelleme UI (bağlantı satırı + sohbet, onaylı) TAMAM. ⏳ Kalan: oran sınırı (spam), raporlama iskeleti, boş-durum cilası.
 
 Her milestone tek başına deploy edilebilir ve değer üretir.
 
