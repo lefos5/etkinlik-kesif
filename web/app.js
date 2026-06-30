@@ -737,24 +737,29 @@ async function loadMyProfile() {
   updateAuthUI();
 }
 
-let authMode = 'login';   // 'login' | 'signup'
+let authMode = 'login';   // 'login' | 'signup' | 'forgot'
 function setAuthMode(mode) {
   authMode = mode;
   const signup = mode === 'signup';
-  document.getElementById('authTitle').textContent = signup ? 'Hesap oluştur' : 'Giriş yap';
-  document.getElementById('authSubmit').textContent = signup ? 'Hesap oluştur' : 'Giriş yap';
-  document.getElementById('authSwitchText').textContent = signup ? 'Zaten hesabın var mı?' : 'Hesabın yok mu?';
-  document.getElementById('authSwitchBtn').textContent = signup ? 'Giriş yap' : 'Kayıt ol';
+  const forgot = mode === 'forgot';
+  document.getElementById('authTitle').textContent = forgot ? 'Şifreni sıfırla' : signup ? 'Hesap oluştur' : 'Giriş yap';
+  const sub = document.getElementById('authSubtitle');
+  sub.textContent = forgot ? 'E-postanı gir; şifre sıfırlama bağlantısını gönderelim.' : '';
+  sub.hidden = !forgot;
+  document.getElementById('authSubmit').textContent = forgot ? 'Sıfırlama bağlantısı gönder' : signup ? 'Hesap oluştur' : 'Giriş yap';
+  document.getElementById('authSwitchText').textContent = forgot ? '' : signup ? 'Zaten hesabın var mı?' : 'Hesabın yok mu?';
+  document.getElementById('authSwitchBtn').textContent = forgot ? 'Giriş yap' : signup ? 'Giriş yap' : 'Kayıt ol';
   document.getElementById('nameField').hidden = !signup;
   document.getElementById('signupExtra').hidden = !signup;
   document.getElementById('kvkkField').hidden = !signup;
+  document.getElementById('pwField').hidden = forgot;      // forgot'ta sifre alani yok
   if (signup && !document.getElementById('authBirthYear').dataset.filled) {
     const by = document.getElementById('authBirthYear');
     const now = new Date().getFullYear();
     for (let y = now - 13; y >= 1925; y--) by.appendChild(new Option(y, y));
     by.dataset.filled = '1';
   }
-  document.getElementById('authForgot').style.display = signup ? 'none' : 'inline';
+  document.getElementById('authForgot').style.display = (signup || forgot) ? 'none' : 'inline';
   document.getElementById('authKvkk').checked = false;
   const pw = document.getElementById('authPassword');
   pw.autocomplete = signup ? 'new-password' : 'current-password';
@@ -792,7 +797,8 @@ document.getElementById('authBtn').onclick = () => {
   else openAuth('login');
 };
 document.getElementById('authClose').onclick = closeAuth;
-document.getElementById('authSwitchBtn').onclick = () => setAuthMode(authMode === 'login' ? 'signup' : 'login');
+document.getElementById('authSwitchBtn').onclick = () =>
+  setAuthMode(authMode === 'forgot' ? 'login' : authMode === 'login' ? 'signup' : 'login');
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (!document.getElementById('authScreen').hidden) closeAuth();
@@ -832,20 +838,10 @@ function updatePwMeter() {
 document.getElementById('authPassword').addEventListener('input', updatePwMeter);
 
 // Sifremi unuttum -> sifirlama e-postasi
-document.getElementById('authForgot').addEventListener('click', async (e) => {
+document.getElementById('authForgot').addEventListener('click', (e) => {
   e.preventDefault();
-  const email = document.getElementById('authEmail').value.trim();
-  const msg = document.getElementById('authMsg');
-  if (!email) { msg.className = 'note err'; msg.textContent = 'Önce e-posta adresini gir.'; return; }
-  try {
-    const { error } = await resetPassword(email);
-    if (error) throw error;
-    msg.className = 'note ok';
-    msg.textContent = '✓ Şifre sıfırlama bağlantısı e-postana gönderildi.';
-  } catch (err) {
-    msg.className = 'note err';
-    msg.textContent = authErrorTr(err.message || '');
-  }
+  document.getElementById('authEmail').focus();
+  setAuthMode('forgot');                               // ayri "sifre sifirla" gorunumune gec
 });
 
 document.getElementById('kvkkLink').addEventListener('click', (e) => {
@@ -859,6 +855,20 @@ document.getElementById('authForm').addEventListener('submit', async (e) => {
   const password = document.getElementById('authPassword').value;
   const msg = document.getElementById('authMsg');
   const btn = document.getElementById('authSubmit');
+
+  if (authMode === 'forgot') {                          // sifre sifirlama bağlantısı gönder
+    if (!email) { msg.className = 'note err'; msg.textContent = 'E-posta adresini gir.'; return; }
+    btn.disabled = true; msg.className = 'note muted'; msg.textContent = 'Gönderiliyor…';
+    try {
+      const { error } = await resetPassword(email);
+      if (error) throw error;
+      msg.className = 'note ok';
+      msg.textContent = '✓ Şifre sıfırlama bağlantısı e-postana gönderildi.';
+    } catch (err) { msg.className = 'note err'; msg.textContent = authErrorTr(err.message || ''); }
+    finally { btn.disabled = false; }
+    return;
+  }
+
   if (!email || !password) return;
   btn.disabled = true;
   msg.className = 'note muted';

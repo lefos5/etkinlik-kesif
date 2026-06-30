@@ -82,6 +82,7 @@
       </div>
       <div class="auth-form-wrap">
         <h1 id="authTitle">Giriş yap</h1>
+        <p id="authSubtitle" class="auth-subtitle" hidden></p>
         <form id="authForm">
           <div class="field" id="nameField" hidden>
             <input id="authName" type="text" maxlength="60" placeholder="Ad Soyad" autocomplete="name" />
@@ -102,7 +103,7 @@
           <div class="field">
             <input id="authEmail" type="email" required placeholder="E-posta" autocomplete="email" />
           </div>
-          <div class="field">
+          <div class="field" id="pwField">
             <span class="pw-wrap">
               <input id="authPassword" type="password" required minlength="8" placeholder="Şifre" autocomplete="current-password" />
               <button type="button" id="pwToggle" class="pw-toggle" aria-label="Şifreyi göster">👁</button>

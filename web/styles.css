@@ -379,6 +379,8 @@ dialog input:focus, dialog textarea:focus, .auth-screen input:focus,
 
 .auth-forgot { display: inline-block; font-size: .84rem; color: var(--accent); text-decoration: none; margin-top: 2px; }
 .auth-forgot:hover { text-decoration: underline; }
+.auth-subtitle { color: var(--muted); font-size: .92rem; line-height: 1.45; margin: -14px 0 22px; }
+.auth-subtitle[hidden] { display: none; }
 .auth-submit { width: 100%; padding: 12px; margin-top: 14px; font-size: 1rem; }
 
 /* Profil / Hesabim — tam sayfa, sol menulu */
