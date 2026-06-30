@@ -1,5 +1,6 @@
-// GET  /api/profile  -> giris yapan kullanicinin profili (yoksa olusturur)
-// PUT  /api/profile  -> profili gunceller { display_name, nickname, bio, interests }
+// GET    /api/profile  -> giris yapan kullanicinin profili (yoksa olusturur)
+// PUT    /api/profile  -> profili gunceller { display_name, nickname, bio, interests }
+// DELETE /api/profile  -> KENDI hesabini siler (auth user -> profiles/attendance/connections CASCADE)
 import { admin } from '../lib/supabase.js';
 import { getUser } from '../lib/auth.js';
 import { json, withErrors } from '../lib/http.js';
@@ -8,6 +9,13 @@ export default withErrors(async (req, res) => {
   const user = await getUser(req);
   if (!user) { json(res, 401, { error: 'Giris gerekli' }); return; }
   const db = admin();
+
+  if (req.method === 'DELETE') {
+    const { error } = await admin().auth.admin.deleteUser(user.id);
+    if (error) throw error;
+    json(res, 200, { ok: true });
+    return;
+  }
 
   if (req.method === 'PUT') {
     let body = req.body;

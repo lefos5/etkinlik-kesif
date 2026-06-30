@@ -1036,9 +1036,9 @@ document.getElementById('chatReport').onclick = async () => {
   const reason = prompt('Bu kişiyi neden bildiriyorsun? (opsiyonel)');
   if (reason === null) return;                        // iptal
   try {
-    await api(`/api/connections/${chatConnId}/report`, {
-      method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ reason }),
+    await api(`/api/connections/${chatConnId}`, {
+      method: 'PATCH', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'report', reason }),
     });
     alert('Bildirimin alındı, teşekkürler. İncelenecek.');
   } catch (e) { alert('Gönderilemedi: ' + e.message); }
@@ -1262,7 +1262,7 @@ document.getElementById('pfDelete').onclick = async () => {
   const msg = document.getElementById('pfDelMsg');
   msg.className = 'note muted'; msg.textContent = 'Siliniyor…';
   try {
-    await api('/api/account', { method: 'DELETE' });
+    await api('/api/profile', { method: 'DELETE' });
     await signOut(); currentProfile = null; closeProfile();
     alert('Hesabın silindi.');
   } catch (e) { msg.className = 'note err'; msg.textContent = 'Silinemedi: ' + e.message; }

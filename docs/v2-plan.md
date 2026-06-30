@@ -59,11 +59,12 @@ sinyali olarak kullanılır (sabit aralık tercihi değil), bu yüzden ek kolon 
 
 Tüm uçlar `withErrors` + `getUser(req)` (401 yoksa) + `json(res, ...)` desenini kullanır.
 
-> **Not (Hobby plan):** Vercel Hobby = deployment başına **max 12 serverless fonksiyon**. Bu yüzden
-> alt-uçlar catch-all dosyalarda toplandı (URL'ler değişmedi):
-> - `api/events/[...path].js` → `/api/events/:id` + `/api/events/:id/companions`
-> - `api/connections/[...path].js` → `/api/connections/:id` (PATCH) + `/:id/messages` + `/:id/report`
-> - `api/connections.js` (bare) → liste/oluştur. Toplam 11 fonksiyon.
+> **Not (Hobby plan):** Vercel Hobby = deployment başına **max 12 serverless fonksiyon**.
+> ⚠️ Bu projede **catch-all `[...path].js` ÇALIŞMIYOR** (404); ama **nested** route'lar çalışıyor
+> (`[id].js` + `[id]/alt.js`). 12'de kalmak için iki birleştirme yapıldı:
+> - **report** ayrı dosya değil → `connections/[id].js` PATCH `action:'report'`
+> - **hesap silme** ayrı dosya değil → `profile.js` `DELETE`
+> Toplam **12 fonksiyon** (tam limitte; yeni endpoint eklemeden önce yine birleştirme gerekir).
 
 ### Adım 1 — Katılım (RSVP) `api/attendance.js`
 | Method | Path | Gövde | Davranış |

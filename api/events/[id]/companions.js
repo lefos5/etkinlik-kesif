@@ -1,61 +1,18 @@
-// /api/events/:id  ve  /api/events/:id/companions — tek fonksiyonda (Hobby plan 12-fonksiyon limiti).
-// detail: etkinlik + kaynak linkleri (+ og-meta cache). companions: eslesme adaylari (v2 M2).
-import { admin } from '../../lib/supabase.js';
-import { fetchOgMeta } from '../../lib/ogmeta.js';
-import { getUser } from '../../lib/auth.js';
-import { scoreCandidate, ageBand } from '../../lib/match.js';
-import { json, withErrors } from '../../lib/http.js';
+// GET /api/events/:id/companions — bu etkinlige gidecek/ilgilenen, eslik arayan adaylar. v2 M2.
+// Cagiran 18+ ve bu etkinlikte want_company olmali; adaylar da want_company=true + 18+; cinsiyet
+// filtresi yok; skorlama lib/match.js. Gizlilik: kartta @nickname/avatar/bio/semt/yas BANDI — gercek ad ASLA.
+import { admin } from '../../../lib/supabase.js';
+import { getUser } from '../../../lib/auth.js';
+import { json, withErrors } from '../../../lib/http.js';
+import { scoreCandidate, ageBand } from '../../../lib/match.js';
 
 const MIN_AGE = 18;
 
-function pathSegs(req) {                       // catch-all: req.query.path (dizi) | URL fallback
-  const p = req.query?.path;
-  if (Array.isArray(p)) return p;
-  if (typeof p === 'string' && p) return [p];
-  const parts = new URL(req.url, 'http://localhost').pathname.split('/').filter(Boolean);
-  const i = parts.indexOf('events');
-  return i >= 0 ? parts.slice(i + 1) : [];
-}
-
 export default withErrors(async (req, res) => {
-  const seg = pathSegs(req);
-  const id = seg[0];
-  if (!id) { json(res, 404, { error: 'Etkinlik bulunamadi' }); return; }
-  if (seg[1] === 'companions') { await companions(req, res, id); return; }
-  await detail(req, res, id);
-});
-
-// GET /api/events/:id — detay + kaynak/affiliate linkleri (aciklama bossa og-meta cache)
-async function detail(req, res, id) {
-  const { data: event, error } = await admin()
-    .from('events').select('*, venue:venues(*)').eq('id', id).maybeSingle();
-  if (error) throw error;
-  if (!event) { json(res, 404, { error: 'Etkinlik bulunamadi' }); return; }
-
-  const { data: sources } = await admin()
-    .from('event_sources').select('source_id, ticket_url').eq('event_id', id);
-
-  const needsDesc = !event.description || event.description.trim().length < 20;
-  const link = (sources ?? []).find((s) => s.ticket_url);
-  if (!event.og_checked && (needsDesc || !event.image_url) && link) {
-    const meta = await fetchOgMeta(link.ticket_url);
-    const patch = { og_checked: true };
-    if (needsDesc && meta.description && meta.description.length >= 20
-        && meta.description.toLowerCase() !== (event.title || '').toLowerCase()) {
-      patch.description = meta.description;
-    }
-    if (!event.image_url && meta.image) patch.image_url = meta.image;
-    await admin().from('events').update(patch).eq('id', id);
-    Object.assign(event, patch);
-  }
-
-  json(res, 200, { event, sources: sources ?? [] });
-}
-
-// GET /api/events/:id/companions — eslik arayan adaylar (18+, want_company, skorlu)
-async function companions(req, res, eventId) {
   const user = await getUser(req);
   if (!user) { json(res, 401, { error: 'Giris gerekli' }); return; }
+  const eventId = req.query?.id
+    || new URL(req.url, 'http://localhost').pathname.split('/').filter(Boolean).at(-2);
   const db = admin();
   const now = new Date();
 
@@ -96,7 +53,7 @@ async function companions(req, res, eventId) {
     connByOther[other] = { id: c.id, status: c.status, direction: c.requester_id === user.id ? 'outgoing' : 'incoming' };
   }
 
-  const companionsList = (profs ?? [])
+  const companions = (profs ?? [])
     .filter((p) => p.birth_year && now.getFullYear() - p.birth_year >= MIN_AGE)
     .filter((p) => connByOther[p.id]?.status !== 'blocked')
     .map((p) => {
@@ -110,5 +67,5 @@ async function companions(req, res, eventId) {
     })
     .sort((a, b) => b.score - a.score);
 
-  json(res, 200, { companions: companionsList });
-}
+  json(res, 200, { companions });
+});
