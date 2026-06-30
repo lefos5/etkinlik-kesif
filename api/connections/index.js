@@ -15,7 +15,7 @@ export default withErrors(async (req, res) => {
 
   if (req.method === 'GET') {
     const { data: conns, error } = await db.from('connections')
-      .select('id, requester_id, addressee_id, event_id, status, updated_at')
+      .select('id, requester_id, addressee_id, event_id, status, updated_at, requester_read_at, addressee_read_at')
       .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
       .order('updated_at', { ascending: false });
     if (error) throw error;
@@ -36,6 +36,7 @@ export default withErrors(async (req, res) => {
         direction: c.requester_id === user.id ? 'outgoing' : 'incoming',
         other: pMap[otherId] || { id: otherId, nickname: null },
         event: c.event_id ? (eMap[c.event_id] || null) : null,
+        my_read_at: c.requester_id === user.id ? c.requester_read_at : c.addressee_read_at,
       };
     };
     const all = rows.map(shape);
@@ -53,6 +54,11 @@ export default withErrors(async (req, res) => {
         const m = last[c.id];
         c.last_message_at = m ? m.created_at : null;
         c.last_message_mine = m ? (m.sender_id === user.id) : null;
+        // okunmamis mesaj: karsidan gelen son mesaj, okudugum andan sonraysa
+        c.unread = !!(c.last_message_at && c.last_message_mine === false
+          && (!c.my_read_at || new Date(c.last_message_at) > new Date(c.my_read_at)));
+        // yeni kabul: benim gonderdigim istek kabul edildi, henuz sohbeti acmadim, mesaj da yok
+        c.new_accept = c.direction === 'outgoing' && !c.last_message_at && !c.my_read_at;
       }
     }
 

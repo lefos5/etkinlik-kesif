@@ -21,6 +21,10 @@ export default withErrors(async (req, res) => {
   if (c.status !== 'accepted') { json(res, 403, { error: 'Mesajlaşma yalnız kabul edilmiş bağlantıda' }); return; }
 
   if (req.method === 'GET') {
+    // Okudum: bu taraf icin read_at = now (bildirimde okunmamis tespiti). Kolon yoksa sessiz gec.
+    const col = c.requester_id === user.id ? 'requester_read_at' : 'addressee_read_at';
+    await db.from('connections').update({ [col]: new Date().toISOString() }).eq('id', connId).then(() => {}, () => {});
+
     const { data: msgs, error } = await db.from('messages')
       .select('id, sender_id, body, created_at')
       .eq('connection_id', connId).order('created_at', { ascending: true }).limit(200);

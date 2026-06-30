@@ -20,9 +20,7 @@ const store = {
     catch { return new Set(); }
   },
   set saved(set) { localStorage.setItem('saved', JSON.stringify([...set])); },
-  // Bildirim: sohbet "okundu" zamanlari (conn id -> ISO) ve kapatilan bildirim anahtarlari
-  get seenMsg() { try { return JSON.parse(localStorage.getItem('seenMsg')) || {}; } catch { return {}; } },
-  set seenMsg(v) { localStorage.setItem('seenMsg', JSON.stringify(v)); },
+  // Bildirim: kapatilan bildirim anahtarlari (okundu durumu artik sunucuda)
   get notifDismissed() { try { return JSON.parse(localStorage.getItem('notifDismissed')) || []; } catch { return []; } },
   set notifDismissed(v) { localStorage.setItem('notifDismissed', JSON.stringify(v)); },
 };
@@ -1030,8 +1028,7 @@ async function renderConnections() {
 // ---- Sohbet (mesajlaşma, v2 M4 — polling) ----------------------------------
 let chatConnId = null, chatTimer = null;
 async function openChat(connId, nick) {
-  chatConnId = connId;
-  const seen = store.seenMsg; seen[connId] = new Date().toISOString(); store.seenMsg = seen;   // okundu isaretle
+  chatConnId = connId;   // okundu durumu sunucuda (GET messages -> read_at), localStorage gerekmez
   document.getElementById('chatTitle').textContent = '@' + (nick || '');
   document.getElementById('chatMessages').innerHTML = '<div class="muted">Yükleniyor…</div>';
   document.getElementById('chatDialog').showModal();
@@ -1101,23 +1098,33 @@ async function refreshNotifications() {
   const items = [];
   try {
     const [conns, att] = await Promise.all([api('/api/connections'), api('/api/attendance')]);
+    // Gelen eslik istekleri
     if (conns.incoming?.length) {
       items.push({ icon: '🤝', text: `${conns.incoming.length} yeni eşlik isteği`, act: 'requests' });
     }
-    const seen = store.seenMsg;
     (conns.accepted || []).forEach((c) => {
-      if (c.last_message_at && c.last_message_mine === false
-        && (!seen[c.id] || new Date(c.last_message_at) > new Date(seen[c.id]))) {
-        items.push({ icon: '💬', text: `@${c.other?.nickname || '—'} sana mesaj gönderdi`, act: 'chat', connId: c.id, nick: c.other?.nickname });
+      const nick = c.other?.nickname || '—';
+      if (c.unread) {                                   // okunmamis mesaj (server-synced)
+        items.push({ icon: '💬', text: `@${nick} sana mesaj gönderdi`, act: 'chat', connId: c.id, nick: c.other?.nickname });
+      } else if (c.new_accept) {                        // gonderdigim istek kabul edildi
+        items.push({ icon: '🎉', text: `@${nick} isteğini kabul etti — sohbete başla`, act: 'chat', connId: c.id, nick: c.other?.nickname });
       }
     });
+    // Etkinlik durumlari: iptal / ertelenme / yaklasma
     const now = Date.now(), soon = now + 48 * 3600000;
     const dismissed = new Set(store.notifDismissed);
     (att.events || []).forEach((e) => {
+      if (e.status === 'cancelled') {
+        if (!dismissed.has(`cancel:${e.id}`)) items.push({ icon: '⚠️', text: `İptal edildi: ${e.title}`, act: 'event', eventId: e.id, dismissKey: `cancel:${e.id}` });
+        return;
+      }
+      if (e.status === 'postponed') {
+        if (!dismissed.has(`postp:${e.id}`)) items.push({ icon: '⏳', text: `Ertelendi: ${e.title}`, act: 'event', eventId: e.id, dismissKey: `postp:${e.id}` });
+        return;
+      }
       const t = new Date(e.start_at).getTime();
-      const key = `up:${e.id}`;
-      if (t >= now && t <= soon && !dismissed.has(key)) {
-        items.push({ icon: '📅', text: `Yaklaşıyor: ${e.title}`, act: 'event', eventId: e.id, dismissKey: key });
+      if (t >= now && t <= soon && !dismissed.has(`up:${e.id}`)) {
+        items.push({ icon: '📅', text: `Yaklaşıyor: ${e.title}`, act: 'event', eventId: e.id, dismissKey: `up:${e.id}` });
       }
     });
   } catch { return; }                                  // hata: sessiz (poll)
