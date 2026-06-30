@@ -59,6 +59,12 @@ sinyali olarak kullanılır (sabit aralık tercihi değil), bu yüzden ek kolon 
 
 Tüm uçlar `withErrors` + `getUser(req)` (401 yoksa) + `json(res, ...)` desenini kullanır.
 
+> **Not (Hobby plan):** Vercel Hobby = deployment başına **max 12 serverless fonksiyon**. Bu yüzden
+> alt-uçlar catch-all dosyalarda toplandı (URL'ler değişmedi):
+> - `api/events/[...path].js` → `/api/events/:id` + `/api/events/:id/companions`
+> - `api/connections/[...path].js` → `/api/connections/:id` (PATCH) + `/:id/messages` + `/:id/report`
+> - `api/connections.js` (bare) → liste/oluştur. Toplam 11 fonksiyon.
+
 ### Adım 1 — Katılım (RSVP) `api/attendance.js`
 | Method | Path | Gövde | Davranış |
 |---|---|---|---|

@@ -1036,9 +1036,9 @@ document.getElementById('chatReport').onclick = async () => {
   const reason = prompt('Bu kişiyi neden bildiriyorsun? (opsiyonel)');
   if (reason === null) return;                        // iptal
   try {
-    await api('/api/reports', {
+    await api(`/api/connections/${chatConnId}/report`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ connection_id: chatConnId, reason }),
+      body: JSON.stringify({ reason }),
     });
     alert('Bildirimin alındı, teşekkürler. İncelenecek.');
   } catch (e) { alert('Gönderilemedi: ' + e.message); }
