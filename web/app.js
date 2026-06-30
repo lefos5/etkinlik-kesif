@@ -20,6 +20,11 @@ const store = {
     catch { return new Set(); }
   },
   set saved(set) { localStorage.setItem('saved', JSON.stringify([...set])); },
+  // Bildirim: sohbet "okundu" zamanlari (conn id -> ISO) ve kapatilan bildirim anahtarlari
+  get seenMsg() { try { return JSON.parse(localStorage.getItem('seenMsg')) || {}; } catch { return {}; } },
+  set seenMsg(v) { localStorage.setItem('seenMsg', JSON.stringify(v)); },
+  get notifDismissed() { try { return JSON.parse(localStorage.getItem('notifDismissed')) || []; } catch { return []; } },
+  set notifDismissed(v) { localStorage.setItem('notifDismissed', JSON.stringify(v)); },
 };
 
 // ---- Kaydet / favoriler -----------------------------------------------------
@@ -975,7 +980,7 @@ async function renderConnections() {
         if (btn.dataset.act === 'block'
           && !confirm('Bu kişiyi engelle? Bağlantınız kaldırılır, bir daha eşleşmezsiniz ve mesajlaşamazsınız.')) return;
         btn.disabled = true;
-        try { await respondConnection(btn.dataset.id, btn.dataset.act); renderConnections(); }
+        try { await respondConnection(btn.dataset.id, btn.dataset.act); renderConnections(); refreshNotifications(); }
         catch (e) { alert('İşlem başarısız: ' + e.message); btn.disabled = false; }
       };
     });
@@ -989,6 +994,7 @@ async function renderConnections() {
 let chatConnId = null, chatTimer = null;
 async function openChat(connId, nick) {
   chatConnId = connId;
+  const seen = store.seenMsg; seen[connId] = new Date().toISOString(); store.seenMsg = seen;   // okundu isaretle
   document.getElementById('chatTitle').textContent = '@' + (nick || '');
   document.getElementById('chatMessages').innerHTML = '<div class="muted">Yükleniyor…</div>';
   document.getElementById('chatDialog').showModal();
@@ -1045,7 +1051,78 @@ document.getElementById('chatReport').onclick = async () => {
 };
 document.getElementById('chatDialog').addEventListener('close', () => {
   clearInterval(chatTimer); chatTimer = null; chatConnId = null;   // polling'i durdur
+  refreshNotifications();                                          // okundu -> bildirimi temizle
 });
+
+// ---- Bildirim çubuğu (uygulama içi, v2) ------------------------------------
+// Mevcut uçlardan (connections + attendance) istemcide toplanir; yeni endpoint/migration yok.
+let notifTimer = null;
+let notifItems = [];
+async function refreshNotifications() {
+  const bar = document.getElementById('notifBar');
+  if (!currentUser) { bar.hidden = true; bar.innerHTML = ''; return; }
+  const items = [];
+  try {
+    const [conns, att] = await Promise.all([api('/api/connections'), api('/api/attendance')]);
+    if (conns.incoming?.length) {
+      items.push({ icon: '🤝', text: `${conns.incoming.length} yeni eşlik isteği`, act: 'requests' });
+    }
+    const seen = store.seenMsg;
+    (conns.accepted || []).forEach((c) => {
+      if (c.last_message_at && c.last_message_mine === false
+        && (!seen[c.id] || new Date(c.last_message_at) > new Date(seen[c.id]))) {
+        items.push({ icon: '💬', text: `@${c.other?.nickname || '—'} sana mesaj gönderdi`, act: 'chat', connId: c.id, nick: c.other?.nickname });
+      }
+    });
+    const now = Date.now(), soon = now + 48 * 3600000;
+    const dismissed = new Set(store.notifDismissed);
+    (att.events || []).forEach((e) => {
+      const t = new Date(e.start_at).getTime();
+      const key = `up:${e.id}`;
+      if (t >= now && t <= soon && !dismissed.has(key)) {
+        items.push({ icon: '📅', text: `Yaklaşıyor: ${e.title}`, act: 'event', eventId: e.id, dismissKey: key });
+      }
+    });
+  } catch { return; }                                  // hata: sessiz (poll)
+  notifItems = items;
+  renderNotifBar();
+}
+function renderNotifBar() {
+  const bar = document.getElementById('notifBar');
+  if (!notifItems.length) { bar.hidden = true; bar.innerHTML = ''; return; }
+  bar.hidden = false;
+  bar.innerHTML = notifItems.map((it, i) =>
+    `<div class="notif-item" data-i="${i}">
+       <span class="notif-ic">${it.icon}</span>
+       <span class="notif-tx">${escapeHtml(it.text)}</span>
+       ${it.dismissKey ? `<button class="notif-x" aria-label="Kapat">✕</button>` : ''}
+     </div>`).join('');
+  bar.querySelectorAll('.notif-item').forEach((el) => {
+    const it = notifItems[+el.dataset.i];
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.notif-x')) {
+        const d = store.notifDismissed; d.push(it.dismissKey); store.notifDismissed = d;
+        refreshNotifications();
+        return;
+      }
+      notifAction(it);
+    });
+  });
+}
+function notifAction(it) {
+  if (it.act === 'requests') { openProfile(); showProfileSection('baglantilar'); }
+  else if (it.act === 'chat') { openChat(it.connId, it.nick); }
+  else if (it.act === 'event') { openDetail(it.eventId); }
+}
+function startNotifPoll() {
+  clearInterval(notifTimer);
+  refreshNotifications();
+  notifTimer = setInterval(refreshNotifications, 60000);
+}
+function stopNotifPoll() {
+  clearInterval(notifTimer); notifTimer = null;
+  const bar = document.getElementById('notifBar'); bar.hidden = true; bar.innerHTML = '';
+}
 function setConnBadge(n) {
   const b = document.getElementById('pfConnBadge');
   b.textContent = n || '';
@@ -1298,8 +1375,10 @@ onAuth((user, event) => {
   if (user) {
     loadMyProfile().then(loadFeed);                        // adi goster + akisi hesap ilgi alanlarina gore tazele
     closeAuth();                                           // giris/dogrulama basariliysa ekrani kapat
+    startNotifPoll();                                      // bildirim cubugu (60sn polling)
   } else {
     loadFeed();                                            // cikista anonim akisa don
+    stopNotifPoll();
   }
 });
 

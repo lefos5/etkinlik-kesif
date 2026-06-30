@@ -124,6 +124,18 @@ body {
 
 main { max-width: 1120px; margin: 0 auto; padding: 8px 24px 80px; }
 
+/* ---- Bildirim çubuğu ---- */
+.notif-bar { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 0; }
+.notif-bar[hidden] { display: none; }
+.notif-item { display: flex; align-items: center; gap: 11px; padding: 11px 14px; cursor: pointer;
+  background: var(--grad-soft); border: 1px solid rgba(139,92,246,.32); border-radius: 12px; transition: filter .15s ease; }
+.notif-item:hover { filter: brightness(1.12); }
+.notif-ic { font-size: 1.05rem; flex: 0 0 auto; }
+.notif-tx { flex: 1; font-size: .92rem; color: var(--text); }
+.notif-x { flex: 0 0 auto; width: 24px; height: 24px; padding: 0; border-radius: 50%; background: rgba(255,255,255,.08);
+  color: var(--muted); font-size: .72rem; }
+.notif-x:hover { background: rgba(255,255,255,.18); color: var(--text); filter: none; }
+
 /* ---- Hero ---- */
 .hero { padding: 44px 0 28px; }
 h1 { font-family: var(--font-display); font-size: clamp(1.9rem, 4vw, 2.9rem); font-weight: 700; margin: 0 0 8px; letter-spacing: -0.03em; line-height: 1.05; }

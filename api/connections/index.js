@@ -39,10 +39,27 @@ export default withErrors(async (req, res) => {
       };
     };
     const all = rows.map(shape);
+    const accepted = all.filter((c) => c.status === 'accepted');
+
+    // Bildirim icin: kabul edilmis baglantilarda son mesaj (yeni-mesaj sinyali)
+    if (accepted.length) {
+      const { data: msgs } = await db.from('messages')
+        .select('connection_id, sender_id, created_at')
+        .in('connection_id', accepted.map((c) => c.id))
+        .order('created_at', { ascending: false }).limit(300);
+      const last = {};
+      for (const m of msgs ?? []) if (!last[m.connection_id]) last[m.connection_id] = m;
+      for (const c of accepted) {
+        const m = last[c.id];
+        c.last_message_at = m ? m.created_at : null;
+        c.last_message_mine = m ? (m.sender_id === user.id) : null;
+      }
+    }
+
     json(res, 200, {
       incoming: all.filter((c) => c.status === 'pending' && c.direction === 'incoming'),
       outgoing: all.filter((c) => c.status === 'pending' && c.direction === 'outgoing'),
-      accepted: all.filter((c) => c.status === 'accepted'),
+      accepted,
     });
     return;
   }
