@@ -235,16 +235,6 @@ section { margin-bottom: 52px; }
 .card:hover { transform: translateY(-5px); border-color: rgba(139,92,246,.55); box-shadow: var(--shadow-hover); }
 
 .card .thumb-wrap { position: relative; overflow: hidden; }
-.save-btn {
-  position: absolute; top: 8px; right: 8px; z-index: 2;
-  width: 34px; height: 34px; padding: 0; border-radius: 50%;
-  background: rgba(8,9,13,.55); backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,.18);
-  color: rgba(255,255,255,.85); font-size: 1.05rem; line-height: 1;
-  display: flex; align-items: center; justify-content: center;
-  transition: transform .12s ease, color .12s ease, background .12s ease;
-}
-.save-btn:hover { transform: scale(1.12); background: rgba(8,9,13,.75); filter: none; }
-.save-btn.on { color: var(--accent-2); border-color: rgba(236,72,153,.5); }
 .card .thumb, .card img.thumb { height: 158px; width: 100%; display: block; object-fit: cover; transition: transform .35s ease; }
 .card:hover img.thumb { transform: scale(1.06); }
 .card:active { transform: translateY(-2px) scale(.992); }

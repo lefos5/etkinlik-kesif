@@ -15,11 +15,6 @@ const store = {
     catch { return { interests: [], freeOnly: false }; }
   },
   set prefs(v) { localStorage.setItem('prefs', JSON.stringify(v)); },
-  get saved() {
-    try { return new Set(JSON.parse(localStorage.getItem('saved')) || []); }
-    catch { return new Set(); }
-  },
-  set saved(set) { localStorage.setItem('saved', JSON.stringify([...set])); },
   // Bildirim: kapatilan bildirim anahtarlari (okundu durumu artik sunucuda)
   get notifDismissed() { try { return JSON.parse(localStorage.getItem('notifDismissed')) || []; } catch { return []; } },
   set notifDismissed(v) { localStorage.setItem('notifDismissed', JSON.stringify(v)); },
@@ -61,23 +56,6 @@ function scoreRing(score) {                       // 0-100 -> renkli dairesel go
     </svg><span class="score-num">${score}</span></span>`;
 }
 
-// ---- Kaydet / favoriler -----------------------------------------------------
-const isSaved = (id) => store.saved.has(id);
-function toggleSaved(id) {
-  const s = store.saved;
-  const on = !s.has(id);
-  if (on) { s.add(id); track(id, 'save'); } else { s.delete(id); track(id, 'unsave'); }
-  store.saved = s;
-  updateSavedCount();
-  // Kaydettiklerim ekrani aciksa listeyi tazele (cikarileni dusur)
-  const sec = document.getElementById('savedSection');
-  if (sec && !sec.hidden) loadSaved();
-  return on;
-}
-function updateSavedCount() {
-  const el = document.getElementById('savedCount');
-  if (el) el.textContent = store.saved.size || '';
-}
 
 let activeFilter = null;
 let searchQuery = '';
@@ -202,7 +180,6 @@ function eventCard(ev) {
   card.innerHTML = `
     <div class="thumb-wrap">
       ${thumb}
-      <button class="save-btn${isSaved(ev.id) ? ' on' : ''}" type="button" aria-label="Kaydet" title="Kaydet">♥</button>
     </div>
     <div class="body">
       <h3>${escapeHtml(ev.title)}</h3>
@@ -213,9 +190,6 @@ function eventCard(ev) {
   // Gorsel yuklenemezse emoji yedegine dus.
   const img = card.querySelector('img.thumb');
   if (img) img.onerror = () => { img.outerHTML = `<div class="thumb thumb-fallback">${emoji}</div>`; };
-  // Kaydet butonu (karta tiklamayi tetiklemesin)
-  const saveBtn = card.querySelector('.save-btn');
-  saveBtn.onclick = (e) => { e.stopPropagation(); saveBtn.classList.toggle('on', toggleSaved(ev.id)); };
   card.onclick = () => { track(ev.id, 'click'); openDetail(ev.id); };
   return card;
 }
@@ -426,7 +400,6 @@ async function openDetail(id) {
       <div class="detail-head">${escapeHtml(ev.title)}</div>
       <div class="cats">${cats}</div>
       <div class="detail-actions">
-        <button id="detailSave" type="button" class="save-toggle${isSaved(id) ? ' on' : ''}">♥ <span>${isSaved(id) ? 'Kaydedildi' : 'Kaydet'}</span></button>
         <button id="rsvpGoing" type="button" class="save-toggle rsvp-going">✅ <span>Gideceğim</span></button>
         <button id="rsvpInterested" type="button" class="save-toggle rsvp-interested">⭐ <span>İlgileniyorum</span></button>
       </div>
@@ -444,12 +417,6 @@ async function openDetail(id) {
       </div>
       <div class="ticket-links">${links || fallback}</div>`;
     body.querySelectorAll('a[data-src]').forEach((a) => a.addEventListener('click', () => track(id, 'ticket_click')));
-    const ds = body.querySelector('#detailSave');
-    ds.onclick = () => {
-      const on = toggleSaved(id);
-      ds.classList.toggle('on', on);
-      ds.querySelector('span').textContent = on ? 'Kaydedildi' : 'Kaydet';
-    };
 
     // RSVP: Gideceğim / İlgileniyorum (+ eşlik arıyorum)
     const goingBtn = body.querySelector('#rsvpGoing');
@@ -481,7 +448,7 @@ async function openDetail(id) {
     interestedBtn.onclick = () => choose('interested');
     wcCheck.onchange = async () => {
       if (!att) return;
-      try { att = await setAttendance(id, att.status, wcCheck.checked); }
+      try { att = await setAttendance(id, att.status, wcCheck.checked); paintRsvp(att); }   // tik degisince butonu da guncelle
       catch (e) { toast('İşlem başarısız: ' + e.message, 'err'); wcCheck.checked = att.want_company; }
     };
   } catch (e) {
@@ -543,36 +510,10 @@ function companionCard(c) {
     </div>`;
 }
 
-// ---- Kaydettiklerim gorunumu ------------------------------------------------
+// ---- Ana ekran --------------------------------------------------------------
 function showHome() {
-  document.getElementById('savedSection').hidden = true;
   document.getElementById('feedSection').hidden = false;
   document.getElementById('browseSection').hidden = false;
-}
-function showSaved() {
-  document.getElementById('feedSection').hidden = true;
-  document.getElementById('browseSection').hidden = true;
-  document.getElementById('savedSection').hidden = false;
-  window.scrollTo(0, 0);
-  loadSaved();
-}
-async function loadSaved() {
-  const ids = [...store.saved];
-  const el = document.getElementById('saved');
-  const hint = document.getElementById('savedHint');
-  if (!ids.length) {
-    el.innerHTML = emptyState('🤍', 'Kaydettiğin etkinlik yok', 'Beğendiğin etkinliklerde kartın köşesindeki ♥ ile kaydet; hepsi burada toplansın.');
-    hint.textContent = '';
-    return;
-  }
-  renderSkeletons(el, Math.min(ids.length, 8));
-  try {
-    const { events } = await api(`/api/events?ids=${ids.join(',')}&limit=100`);
-    hint.textContent = `${events.length} etkinlik`;
-    renderInto(el, events, 'Kaydettiklerin görüntülenemedi.');
-  } catch (e) {
-    el.innerHTML = `<div class="empty">Yüklenemedi: ${e.message}</div>`;
-  }
 }
 
 // ---- Takvim (tarih secimi) --------------------------------------------------
@@ -721,10 +662,6 @@ function buildFilterChips() {
 
 // ---- Olaylar ----------------------------------------------------------------
 document.getElementById('prefsBtn').onclick = () => { buildPrefsDialog(); document.getElementById('prefsDialog').showModal(); };
-document.getElementById('savedBtn').onclick = () => {
-  const sec = document.getElementById('savedSection');
-  if (sec.hidden) showSaved(); else showHome();
-};
 document.getElementById('brand').onclick = showHome;   // logoya tiklayinca ana ekran
 
 // Takvim olaylari
@@ -1451,7 +1388,6 @@ onAuth((user, event) => {
 });
 
 // ---- Baslat -----------------------------------------------------------------
-updateSavedCount();
 buildFilterChips();
 populateDistricts();
 loadFeed();
